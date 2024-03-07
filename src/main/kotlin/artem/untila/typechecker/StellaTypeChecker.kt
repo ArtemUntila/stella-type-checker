@@ -1,14 +1,13 @@
 package artem.untila.typechecker
 
 import StellaParser.*
-import StellaParserBaseVisitor
 import artem.untila.typechecker.error.*
 import artem.untila.typechecker.types.*
 import artem.untila.typechecker.types.StellaFunction.Companion.arrow
 import org.antlr.v4.runtime.ParserRuleContext
 import java.util.ArrayDeque
 
-class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
+class StellaTypeChecker : StellaVisitor<StellaType>() {
 
     private val typeResolver = StellaTypeResolver()
 
@@ -18,8 +17,8 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
     private val expectedType: StellaType
         get() = expectedTypes.peek()
 
-    // 1. Language core
-    // 1a. Program
+    // Language core
+    // Program
     override fun visitProgram(ctx: ProgramContext): StellaType = with(ctx) {
         val funVariables = decls.filterIsInstance<DeclFunContext>().map { it.toContextVariable() }
         variableContext.pushAll(funVariables)
@@ -30,7 +29,7 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
         return StellaType { "Program" }
     }
 
-    // 1b. Function declaration
+    // Function declaration
     override fun visitDeclFun(ctx: DeclFunContext): StellaType = with(ctx) {
         val variables = mutableListOf(paramDecl.toContextVariable())
         val function = toStellaFunction()
@@ -46,7 +45,7 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
         return function
     }
 
-    // 1c. Boolean expressions
+    // Boolean expressions
     override fun visitConstTrue(ctx: ConstTrueContext): StellaType = StellaBool
     override fun visitConstFalse(ctx: ConstFalseContext): StellaType = StellaBool
 
@@ -59,7 +58,7 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
         return thenType
     }
 
-    // 1d. Nat expressions
+    // Nat expressions
     // #natural-literals
     override fun visitConstInt(ctx: ConstIntContext): StellaType = StellaNat
 
@@ -80,7 +79,7 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
         return initialType
     }
 
-    // 1e. First-class functions
+    // First-class functions
     override fun visitAbstraction(ctx: AbstractionContext): StellaType = with(ctx) {
         val param = paramDecl.toContextVariable()
         val expectedReturnType = when (val t = expectedType) {
@@ -101,15 +100,15 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
         return function.returnType
     }
 
-    // 1f. Variables
+    // Variables
     override fun visitVar(ctx: VarContext): StellaType = with(ctx) {
         return variableContext[text]?.type ?: throw UndefinedVariable()
     }
 
-    // 2. #unit-type
+    // #unit-type
     override fun visitConstUnit(ctx: ConstUnitContext): StellaType = StellaUnit
 
-    // 3. #pairs and #tuples
+    // #pairs and #tuples
     override fun visitTuple(ctx: TupleContext): StellaType = with(ctx) {
         val types = when (val tuple = expectedType) {
             is StellaTuple -> {
@@ -131,7 +130,7 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
         return tuple.types[j - 1]
     }
 
-    // 4. #records
+    // #records
     override fun visitRecord(ctx: RecordContext): StellaType = with(ctx) {
         val binds = bindings.associate { it.name.text to it.rhs }
         val fields = when (val record = expectedType) {
@@ -151,19 +150,25 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
         return record.fields[label.text] ?: throw UnexpectedFieldAccess()
     }
 
-    // 5. #let-bindings
+    // #let-bindings
     override fun visitLet(ctx: LetContext): StellaType = with(ctx) {
         val variable = patternBinding.run { ContextVariable(pat.text, rhs.check(StellaAny)) }
         return body.checkOrThrow(expectedType, variable)
     }
 
-    // 6. #type-ascriptions
+    // #type-ascriptions
     override fun visitTypeAsc(ctx: TypeAscContext): StellaType = with(ctx) {
         if (expectedType != type_.resolve()) throw UnexpectedTypeForExpression()
         return expr_.checkOrThrow(expectedType)
     }
 
-    // 8. #lists
+    // #fixpoint-combinator
+    override fun visitFix(ctx: FixContext): StellaType = with(ctx) {
+        expr_.checkOrThrow(expectedType arrow expectedType)
+        return expectedType
+    }
+
+    // #lists
     // DANGER: idio(ma)tic Kotlin zone!
     override fun visitList(ctx: ListContext): StellaType = with(ctx) {
         val type = when (val list = expectedType) {
@@ -199,23 +204,13 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
     override fun visitTail(ctx: TailContext): StellaType = visitListOp(ctx.list) { it }
     override fun visitIsEmpty(ctx: IsEmptyContext): StellaType = visitListOp(ctx.list) { StellaBool }
 
-    private inline fun <T : StellaType> visitListOp(expr: ExprContext, block: (StellaList) -> T): T {
+    private inline fun visitListOp(expr: ExprContext, block: (StellaList) -> StellaType): StellaType {
         val list = expr.check(StellaAny) as? StellaList ?: throw NotAList()
         return block(list)
     }
 
-    // 10. #fixpoint-combinator
-    override fun visitFix(ctx: FixContext): StellaType = with(ctx) {
-        expr_.checkOrThrow(expectedType arrow expectedType)
-        return expectedType
-    }
-
-    // Meh...
-    override fun visitSequence(ctx: SequenceContext): StellaType = ctx.expr1.check()
-    override fun visitParenthesisedExpr(ctx: ParenthesisedExprContext): StellaType = ctx.expr_.check()
-
     // Utils
-    private fun ParserRuleContext.check(type: StellaType? = null, vararg variables: ContextVariable): StellaType {
+    internal fun ParserRuleContext.check(type: StellaType? = null, vararg variables: ContextVariable): StellaType {
         if (type != null) expectedTypes.push(type)
         variableContext.pushAll(*variables)
 
@@ -227,12 +222,12 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
         return checkedType
     }
 
-    private fun ExprContext.checkOrNull(type: StellaType, vararg variables: ContextVariable): StellaType? {
+    internal fun ExprContext.checkOrNull(type: StellaType, vararg variables: ContextVariable): StellaType? {
         // order of type comparison really matters, because StellaAny overrides equals
         return check(type, *variables).takeIf { type == it }
     }
 
-    private fun ExprContext.checkOrThrow(type: StellaType, vararg variables: ContextVariable): StellaType {
+    internal fun ExprContext.checkOrThrow(type: StellaType, vararg variables: ContextVariable): StellaType {
         return checkOrNull(type, *variables) ?: throw UnexpectedTypeForExpression()
     }
 

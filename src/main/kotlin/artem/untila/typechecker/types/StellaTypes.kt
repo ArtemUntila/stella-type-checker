@@ -30,7 +30,7 @@ data class StellaFunction(val paramType: StellaType, val returnType: StellaType)
 }
 
 object StellaUnit : StellaType {
-    override fun toString() = "unit"
+    override fun toString() = "Unit"
 }
 
 data class StellaTuple(val types: List<StellaType>) : StellaType {
