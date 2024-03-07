@@ -39,3 +39,7 @@ data class StellaTuple(val types: List<StellaType>) : StellaType {
 
     override fun toString() = types.joinToString(",", "{", "}")
 }
+
+data class StellaRecord(val fields: Map<String, StellaType>) : StellaType {
+    override fun toString() = fields.map { (l, t) -> "$l:$t"}.joinToString(",", "{", "}")
+}

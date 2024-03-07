@@ -32,5 +32,9 @@ class StellaTypeResolver : StellaParserBaseVisitor<StellaType>() {
         return StellaTuple(types.map { resolve(it) })
     }
 
+    override fun visitTypeRecord(ctx: TypeRecordContext): StellaType = with(ctx) {
+        return StellaRecord(fieldTypes.associate { it.label.text to resolve(it.type_) })
+    }
+
     private fun resolve(typeContext: StellatypeContext): StellaType = typeContext.accept(this)
 }

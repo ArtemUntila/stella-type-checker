@@ -1,18 +1,17 @@
 package artem.untila.typechecker
 
 import artem.untila.typechecker.types.StellaType
+import java.util.ArrayDeque
 
-class VariableContext(
-    private val parent: VariableContext?,
-    private val variable: ContextVariable
-) {
-    constructor(variable: ContextVariable) : this(null, variable)
+class VariableContext : ArrayDeque<ContextVariable>() {
 
-    operator fun get(name: String): ContextVariable? = variable.takeIf { name == it.name } ?: parent?.get(name)
+    operator fun get(name: String): ContextVariable? = firstOrNull { name == it.name }
 
-    fun sub(variable: ContextVariable): VariableContext = VariableContext(this, variable)
+    fun pushAll(elements: Collection<ContextVariable>) = elements.forEach { push(it) }
 
-    fun sub(vararg variables: ContextVariable): VariableContext = variables.fold(this) { ctx, v -> ctx.sub(v) }
+    fun pushAll(vararg elements: ContextVariable) = pushAll(elements.asList())
+
+    fun pop(n: Int) = repeat(n) { pop() }
 }
 
 data class ContextVariable(val name: String, val type: StellaType)

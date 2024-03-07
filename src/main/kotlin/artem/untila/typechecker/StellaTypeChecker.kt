@@ -11,7 +11,7 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
 
     private val typeResolver = StellaTypeResolver()
 
-    private lateinit var variableContext: VariableContext
+    private val variableContext = VariableContext()
 
     private val expectedTypes = ArrayDeque<StellaType>()  // for debugging purposes
     private val expectedType: StellaType
@@ -20,14 +20,12 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
     // 1. Language core
     // 1a. Program
     override fun visitProgram(ctx: ProgramContext): StellaType = with(ctx) {
-        val funVariables = decls.filterIsInstance<DeclFunContext>().map { it.toContextVariable() }
-        if (funVariables.isNotEmpty()) {
-            variableContext = VariableContext(funVariables.first()).sub(*funVariables.drop(1).toTypedArray())
-        }
+        val funVariables = decls.filterIsInstance<DeclFunContext>().map { it.toContextVariable() }.toMutableList()
+        variableContext.pushAll(funVariables)
 
         decls.forEach { it.check() }
 
-        if (funVariables.none { it.name == "main" }) throw MissingMain()
+        if (variableContext["main"] == null) throw MissingMain()
         return StellaType { "Program" }
     }
 
@@ -132,13 +130,24 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
         return tuple.types[j - 1]
     }
 
-    // 4. Records
-    override fun visitRecord(ctx: RecordContext): StellaType {
-        return super.visitRecord(ctx)
+    // 4. #records
+    override fun visitRecord(ctx: RecordContext): StellaType = with(ctx) {
+        val binds = bindings.associate { it.name.text to it.rhs }
+        val fields = when (val t = expectedType) {
+            is StellaRecord -> {
+                if (binds.keys.any { !t.fields.contains(it) }) throw UnexpectedRecordFields()
+                if (t.fields.keys.any { !binds.contains(it) }) throw MissingRecordFields()
+                binds.mapValues { (l, it) -> it.checkOrThrow(t.fields[l]!!) }
+            }
+            is StellaAny -> binds.mapValues { (_, it) -> it.check(StellaAny) }
+            else -> throw UnexpectedRecord()
+        }
+        return StellaRecord(fields)
     }
 
-    override fun visitDotRecord(ctx: DotRecordContext): StellaType {
-        return super.visitDotRecord(ctx)
+    override fun visitDotRecord(ctx: DotRecordContext): StellaType = with(ctx) {
+        val record = expr_.check(StellaAny) as? StellaRecord ?: throw NotARecord()
+        return record.fields[label.text] ?: throw UnexpectedFieldAccess()
     }
 
     // 5. Let bindings
@@ -153,13 +162,12 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
     // Utils
     private fun ParserRuleContext.check(type: StellaType? = null, vararg variables: ContextVariable): StellaType {
         if (type != null) expectedTypes.addFirst(type)
-        val prevContext = variableContext
-        variableContext = variableContext.sub(*variables)
+        variableContext.pushAll(*variables)
 
         val checkedType = accept(this@StellaTypeChecker)
 
         if (type != null) expectedTypes.removeFirst()
-        variableContext = prevContext
+        variableContext.pop(variables.size)
 
         return checkedType
     }
