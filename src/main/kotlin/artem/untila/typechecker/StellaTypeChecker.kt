@@ -163,6 +163,12 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
         return expr_.checkOrThrow(expectedType)
     }
 
+    // 10. #fixpoint-combinator
+    override fun visitFix(ctx: FixContext): StellaType = with(ctx) {
+        expr_.checkOrThrow(expectedType arrow expectedType)
+        return expectedType
+    }
+
     // Meh...
     override fun visitSequence(ctx: SequenceContext): StellaType = ctx.expr1.check()
     override fun visitParenthesisedExpr(ctx: ParenthesisedExprContext): StellaType = ctx.expr_.check()
