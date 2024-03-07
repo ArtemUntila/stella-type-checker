@@ -157,6 +157,12 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
         return body.checkOrThrow(expectedType, variable)
     }
 
+    // 6. #type-ascriptions
+    override fun visitTypeAsc(ctx: TypeAscContext): StellaType = with(ctx) {
+        if (expectedType != type_.resolve()) throw UnexpectedTypeForExpression()
+        return expr_.checkOrThrow(expectedType)
+    }
+
     // Meh...
     override fun visitSequence(ctx: SequenceContext): StellaType = ctx.expr1.check()
     override fun visitParenthesisedExpr(ctx: ParenthesisedExprContext): StellaType = ctx.expr_.check()
