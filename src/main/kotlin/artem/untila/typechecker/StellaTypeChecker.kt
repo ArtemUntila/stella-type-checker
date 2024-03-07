@@ -21,7 +21,7 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
     // 1. Language core
     // 1a. Program
     override fun visitProgram(ctx: ProgramContext): StellaType = with(ctx) {
-        val funVariables = decls.filterIsInstance<DeclFunContext>().map { it.toContextVariable() }.toMutableList()
+        val funVariables = decls.filterIsInstance<DeclFunContext>().map { it.toContextVariable() }
         variableContext.pushAll(funVariables)
 
         decls.forEach { it.check() }
@@ -97,7 +97,7 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
 
     override fun visitApplication(ctx: ApplicationContext): StellaType = with(ctx) {
         val function = `fun`.check(StellaAny) as? StellaFunction ?: throw NotAFunction()
-        expr.checkOrThrow(function.paramType)
+        args.first().checkOrThrow(function.paramType)
         return function.returnType
     }
 
@@ -111,10 +111,10 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
 
     // 3. #pairs and #tuples
     override fun visitTuple(ctx: TupleContext): StellaType = with(ctx) {
-        val types = when (val t = expectedType) {
+        val types = when (val tuple = expectedType) {
             is StellaTuple -> {
-                if (t.types.size != exprs.size) { throw UnexpectedTupleLength() }
-                exprs.mapIndexed { j, it -> it.checkOrThrow(t.types[j]) }
+                if (tuple.types.size != exprs.size) { throw UnexpectedTupleLength() }
+                exprs.mapIndexed { j, it -> it.checkOrThrow(tuple.types[j]) }
             }
             is StellaAny -> exprs.map { it.check(StellaAny) }
             else -> throw UnexpectedTuple()
@@ -134,11 +134,11 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
     // 4. #records
     override fun visitRecord(ctx: RecordContext): StellaType = with(ctx) {
         val binds = bindings.associate { it.name.text to it.rhs }
-        val fields = when (val t = expectedType) {
+        val fields = when (val record = expectedType) {
             is StellaRecord -> {
-                if (binds.keys.any { !t.fields.contains(it) }) throw UnexpectedRecordFields()
-                if (t.fields.keys.any { !binds.contains(it) }) throw MissingRecordFields()
-                binds.mapValues { (l, it) -> it.checkOrThrow(t.fields[l]!!) }
+                if (binds.keys.any { !record.fields.contains(it) }) throw UnexpectedRecordFields()
+                if (record.fields.keys.any { !binds.contains(it) }) throw MissingRecordFields()
+                binds.mapValues { (l, it) -> it.checkOrThrow(record.fields[l]!!) }
             }
             is StellaAny -> binds.mapValues { (_, it) -> it.check(StellaAny) }
             else -> throw UnexpectedRecord()
@@ -161,6 +161,47 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
     override fun visitTypeAsc(ctx: TypeAscContext): StellaType = with(ctx) {
         if (expectedType != type_.resolve()) throw UnexpectedTypeForExpression()
         return expr_.checkOrThrow(expectedType)
+    }
+
+    // 8. #lists
+    // DANGER: idio(ma)tic Kotlin zone!
+    override fun visitList(ctx: ListContext): StellaType = with(ctx) {
+        val type = when (val list = expectedType) {
+            is StellaList -> {
+                exprs.forEach { it.checkOrThrow(list.type) }
+                list.type
+            }
+            is StellaAny -> {
+                if (exprs.isEmpty()) throw AmbiguousList()
+                val listType = exprs.first().check(StellaAny)
+                exprs.drop(1).forEach { it.checkOrThrow(listType) }
+                listType
+            }
+            else -> throw UnexpectedList()
+        }
+        return StellaList(type)
+    }
+
+    override fun visitConsList(ctx: ConsListContext): StellaType = with(ctx) {
+        when (val list = expectedType) {
+            is StellaList -> {
+                head.checkOrThrow(list.type)
+                tail.checkOrThrow(list)
+            }
+            is StellaAny -> {
+                StellaList(head.check(StellaAny)).also { tail.checkOrThrow(it) }
+            }
+            else -> throw UnexpectedList()
+        }
+    }
+
+    override fun visitHead(ctx: HeadContext): StellaType = visitListOp(ctx.list) { it.type }
+    override fun visitTail(ctx: TailContext): StellaType = visitListOp(ctx.list) { it }
+    override fun visitIsEmpty(ctx: IsEmptyContext): StellaType = visitListOp(ctx.list) { StellaBool }
+
+    private inline fun <T : StellaType> visitListOp(expr: ExprContext, block: (StellaList) -> T): T {
+        val list = expr.check(StellaAny) as? StellaList ?: throw NotAList()
+        return block(list)
     }
 
     // 10. #fixpoint-combinator
