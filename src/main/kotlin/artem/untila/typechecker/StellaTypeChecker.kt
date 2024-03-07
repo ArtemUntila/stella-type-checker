@@ -6,6 +6,7 @@ import artem.untila.typechecker.error.*
 import artem.untila.typechecker.types.*
 import artem.untila.typechecker.types.StellaFunction.Companion.arrow
 import org.antlr.v4.runtime.ParserRuleContext
+import java.util.ArrayDeque
 
 class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
 
@@ -15,7 +16,7 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
 
     private val expectedTypes = ArrayDeque<StellaType>()  // for debugging purposes
     private val expectedType: StellaType
-        get() = expectedTypes.first()
+        get() = expectedTypes.peek()
 
     // 1. Language core
     // 1a. Program
@@ -150,9 +151,10 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
         return record.fields[label.text] ?: throw UnexpectedFieldAccess()
     }
 
-    // 5. Let bindings
-    override fun visitLet(ctx: LetContext): StellaType {
-        return super.visitLet(ctx)
+    // 5. #let-bindings
+    override fun visitLet(ctx: LetContext): StellaType = with(ctx) {
+        val variable = patternBinding.run { ContextVariable(pat.text, rhs.check(StellaAny)) }
+        return body.checkOrThrow(expectedType, variable)
     }
 
     // Meh...
@@ -161,12 +163,12 @@ class StellaTypeChecker : StellaParserBaseVisitor<StellaType>() {
 
     // Utils
     private fun ParserRuleContext.check(type: StellaType? = null, vararg variables: ContextVariable): StellaType {
-        if (type != null) expectedTypes.addFirst(type)
+        if (type != null) expectedTypes.push(type)
         variableContext.pushAll(*variables)
 
         val checkedType = accept(this@StellaTypeChecker)
 
-        if (type != null) expectedTypes.removeFirst()
+        if (type != null) expectedTypes.pop()
         variableContext.pop(variables.size)
 
         return checkedType
