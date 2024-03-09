@@ -48,5 +48,13 @@ class StellaTypeResolver : StellaParserBaseVisitor<StellaType>() {
         return StellaSum(resolve(left), resolve(right))
     }
 
+    override fun visitTypeVariant(ctx: TypeVariantContext): StellaVariant = with(ctx) {
+        return StellaVariant(fieldTypes.map { visitVariantFieldType(it) }.toSet())
+    }
+
+    override fun visitVariantFieldType(ctx: VariantFieldTypeContext): StellaField = with(ctx) {
+        return StellaField(label.text, resolve(type_))
+    }
+
     private fun resolve(typeContext: StellatypeContext): StellaType = typeContext.accept(this)
 }

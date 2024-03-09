@@ -55,6 +55,13 @@ data class StellaSum(val left: StellaType, val right: StellaType) : StellaType {
     override fun toString() = "$left + $right"
 }
 
+data class StellaVariant(val fields: Set<StellaField>) : StellaType {
+
+    operator fun get(label: String): StellaField? = fields.firstOrNull { label == it.label }
+
+    override fun toString() = fields.joinToString(", ", "<| ", " |>")
+}
+
 data class StellaField(val label: String, val type: StellaType) : StellaType {
     override fun toString() = "$label : $type"
 }

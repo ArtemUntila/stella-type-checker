@@ -225,6 +225,18 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
         }
     }
 
+    // #variants
+    override fun visitVariant(ctx: VariantContext): StellaType = with(ctx) {
+        when (val variant = expectedType) {
+            is StellaVariant -> variant.also {
+                val field = it[label.text] ?: throw UnexpectedVariantLabel()
+                rhs.checkOrThrow(field.type)
+            }
+            is StellaAny -> throw AmbiguousVariantType()
+            else -> throw UnexpectedVariant()
+        }
+    }
+
     // Utils
     internal fun ExprContext.check(type: StellaType, vararg variables: ContextVariable): StellaType {
         expectedTypes.push(type)

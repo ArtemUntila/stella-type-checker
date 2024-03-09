@@ -7,37 +7,42 @@ sealed class TypeCheckError(name: String) : RuntimeException() {
     override val message: String = "ERROR_$name"
 }
 
-// Core
-/* 1*/ class MissingMain : TypeCheckError("MISSING_MAIN")
-/* 2*/ class UndefinedVariable : TypeCheckError("UNDEFINED_VARIABLE")
-/* 3*/ class UnexpectedTypeForExpression : TypeCheckError("UNEXPECTED_TYPE_FOR_EXPRESSION")
-/* 4*/ class NotAFunction : TypeCheckError("NOT_A_FUNCTION")
-/* 8*/ class UnexpectedLambda : TypeCheckError("UNEXPECTED_LAMBDA")
-/* 9*/ class UnexpectedTypeForParameter : TypeCheckError("UNEXPECTED_TYPE_FOR_PARAMETER")
+// Language core
+class MissingMain : TypeCheckError("MISSING_MAIN")
+class UndefinedVariable : TypeCheckError("UNDEFINED_VARIABLE")
+class UnexpectedTypeForExpression : TypeCheckError("UNEXPECTED_TYPE_FOR_EXPRESSION")
+class NotAFunction : TypeCheckError("NOT_A_FUNCTION")
+class UnexpectedLambda : TypeCheckError("UNEXPECTED_LAMBDA")
+class UnexpectedTypeForParameter : TypeCheckError("UNEXPECTED_TYPE_FOR_PARAMETER")
 
-// Tuples
-/* 5*/ class NotATuple : TypeCheckError("NOT_A_TUPLE")
-/*10*/ class UnexpectedTuple : TypeCheckError("UNEXPECTED_TUPLE")
-/*17*/ class TupleIndexOutOfBounds : TypeCheckError("TUPLE_INDEX_OUT_OF_BOUNDS")
-/*18*/ class UnexpectedTupleLength : TypeCheckError("UNEXPECTED_TUPLE_LENGTH")
+// #tuples
+class NotATuple : TypeCheckError("NOT_A_TUPLE")
+class UnexpectedTuple : TypeCheckError("UNEXPECTED_TUPLE")
+class TupleIndexOutOfBounds : TypeCheckError("TUPLE_INDEX_OUT_OF_BOUNDS")
+class UnexpectedTupleLength : TypeCheckError("UNEXPECTED_TUPLE_LENGTH")
 
-// Records
-/* 6*/ class NotARecord : TypeCheckError("NOT_A_RECORD")
-/*11*/ class UnexpectedRecord : TypeCheckError("UNEXPECTED_RECORD")
-/*14*/ class MissingRecordFields : TypeCheckError("MISSING_RECORD_FIELDS")
-/*15*/ class UnexpectedRecordFields : TypeCheckError("UNEXPECTED_RECORD_FIELDS")
-/*16*/ class UnexpectedFieldAccess : TypeCheckError("UNEXPECTED_FIELD_ACCESS")
+// #records
+class NotARecord : TypeCheckError("NOT_A_RECORD")
+class UnexpectedRecord : TypeCheckError("UNEXPECTED_RECORD")
+class MissingRecordFields : TypeCheckError("MISSING_RECORD_FIELDS")
+class UnexpectedRecordFields : TypeCheckError("UNEXPECTED_RECORD_FIELDS")
+class UnexpectedFieldAccess : TypeCheckError("UNEXPECTED_FIELD_ACCESS")
 
-// Lists
-/* 7*/ class NotAList : TypeCheckError("NOT_A_LIST")
-/*12*/ class UnexpectedList : TypeCheckError("UNEXPECTED_LIST")
-/*20*/ class AmbiguousList : TypeCheckError("AMBIGUOUS_LIST")
+// #lists
+class NotAList : TypeCheckError("NOT_A_LIST")
+class UnexpectedList : TypeCheckError("UNEXPECTED_LIST")
+class AmbiguousList : TypeCheckError("AMBIGUOUS_LIST")
 
-// Sum types
-/*13*/ class UnexpectedInjection : TypeCheckError("UNEXPECTED_INJECTION")
-/*19*/ class AmbiguousSumType : TypeCheckError("AMBIGUOUS_SUM_TYPE")
+// #sum-types
+class UnexpectedInjection : TypeCheckError("UNEXPECTED_INJECTION")
+class AmbiguousSumType : TypeCheckError("AMBIGUOUS_SUM_TYPE")
+
+// #variants
+class UnexpectedVariant : TypeCheckError("UNEXPECTED_VARIANT")
+class UnexpectedVariantLabel : TypeCheckError("UNEXPECTED_VARIANT_LABEL")
+class AmbiguousVariantType : TypeCheckError("AMBIGUOUS_VARIANT_TYPE")
 
 // Pattern-matching
-/*21*/ class IllegalEmptyMatching : TypeCheckError("ILLEGAL_EMPTY_MATCHING")
-/*22*/ class NonexhaustiveMatchPatterns : TypeCheckError("NONEXHAUSTIVE_MATCH_PATTERNS")
-/*23*/ class UnexpectedPatternForType : TypeCheckError("UNEXPECTED_PATTERN_FOR_TYPE")
+class IllegalEmptyMatching : TypeCheckError("ILLEGAL_EMPTY_MATCHING")
+class NonexhaustiveMatchPatterns : TypeCheckError("NONEXHAUSTIVE_MATCH_PATTERNS")
+class UnexpectedPatternForType : TypeCheckError("UNEXPECTED_PATTERN_FOR_TYPE")
