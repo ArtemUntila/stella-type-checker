@@ -40,7 +40,7 @@ data class StellaTuple(val types: List<StellaType>) : StellaType {
     override fun toString() = types.joinToString(", ", "{", "}")
 }
 
-data class StellaRecord(val fields: Set<StellaField>) : StellaType {
+data class StellaRecord(val fields: List<StellaField>) : StellaType {
 
     operator fun get(label: String): StellaField? = fields.firstOrNull { label == it.label }
 
@@ -55,7 +55,7 @@ data class StellaSum(val left: StellaType, val right: StellaType) : StellaType {
     override fun toString() = "$left + $right"
 }
 
-data class StellaVariant(val fields: Set<StellaField>) : StellaType {
+data class StellaVariant(val fields: List<StellaField>) : StellaType {
 
     operator fun get(label: String): StellaField? = fields.firstOrNull { label == it.label }
 
@@ -63,5 +63,10 @@ data class StellaVariant(val fields: Set<StellaField>) : StellaType {
 }
 
 data class StellaField(val label: String, val type: StellaType) : StellaType {
+
+    companion object {
+        infix fun String.colon(type: StellaType) = StellaField(this, type)
+    }
+
     override fun toString() = "$label : $type"
 }

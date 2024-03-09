@@ -3,6 +3,7 @@ package artem.untila.typechecker
 import StellaParser.*
 import artem.untila.typechecker.error.*
 import artem.untila.typechecker.types.*
+import artem.untila.typechecker.types.StellaField.Companion.colon
 import artem.untila.typechecker.types.StellaFunction.Companion.arrow
 import java.util.ArrayDeque
 
@@ -134,16 +135,16 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     // #records
     override fun visitRecord(ctx: RecordContext): StellaType = with(ctx) {
         val binds = bindings.associate { it.name.text to it.rhs }
-        val labelToType = when (val record = expectedType) {
+        val fields = when (val record = expectedType) {
             is StellaRecord -> {
                 if (binds.keys.any { record[it] == null }) throw UnexpectedRecordFields()
                 if (record.fields.any { !binds.contains(it.label) }) throw MissingRecordFields()
-                binds.mapValues { (l, it) -> it.checkOrThrow(record[l]!!.type) }
+                record.fields.map { it.label colon binds[it.label]!!.checkOrThrow(it.type) }
             }
-            is StellaAny -> binds.mapValues { (_, it) -> it.check(StellaAny) }
+            is StellaAny -> binds.map { (label, expr) -> label colon expr.check(StellaAny) }
             else -> throw UnexpectedRecord()
         }
-        return StellaRecord(labelToType.map { (l, t) -> StellaField(l, t)}.toSet())
+        return StellaRecord(fields)
     }
 
     override fun visitDotRecord(ctx: DotRecordContext): StellaType = with(ctx) {

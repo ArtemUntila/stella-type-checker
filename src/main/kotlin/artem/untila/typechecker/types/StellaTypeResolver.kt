@@ -33,7 +33,7 @@ class StellaTypeResolver : StellaParserBaseVisitor<StellaType>() {
     }
 
     override fun visitTypeRecord(ctx: TypeRecordContext): StellaRecord = with(ctx) {
-        return StellaRecord(fieldTypes.map { visitRecordFieldType(it) }.toSet())
+        return StellaRecord(fieldTypes.map { visitRecordFieldType(it) })
     }
 
     override fun visitRecordFieldType(ctx: RecordFieldTypeContext): StellaField = with(ctx) {
@@ -49,7 +49,7 @@ class StellaTypeResolver : StellaParserBaseVisitor<StellaType>() {
     }
 
     override fun visitTypeVariant(ctx: TypeVariantContext): StellaVariant = with(ctx) {
-        return StellaVariant(fieldTypes.map { visitVariantFieldType(it) }.toSet())
+        return StellaVariant(fieldTypes.map { visitVariantFieldType(it) })
     }
 
     override fun visitVariantFieldType(ctx: VariantFieldTypeContext): StellaField = with(ctx) {
