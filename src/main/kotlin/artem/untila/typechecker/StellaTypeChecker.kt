@@ -165,8 +165,11 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
 
     // #fixpoint-combinator
     override fun visitFix(ctx: FixContext): StellaType = with(ctx) {
-        expr_.checkOrThrow(expectedType arrow expectedType)
-        return expectedType
+        val function = expr_.check(StellaAny) as? StellaFunction ?: throw NotAFunction()
+        if (function.paramType::class != function.returnType::class) {
+            throw UnexpectedTypeForExpression()
+        }
+        return function.returnType
     }
 
     // #lists
