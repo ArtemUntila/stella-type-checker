@@ -5,15 +5,15 @@ import StellaParserBaseVisitor
 
 class StellaTypeResolver : StellaParserBaseVisitor<StellaType>() {
 
-    override fun visitTypeBool(ctx: TypeBoolContext): StellaType {
+    override fun visitTypeBool(ctx: TypeBoolContext): StellaBool {
         return StellaBool
     }
 
-    override fun visitTypeNat(ctx: TypeNatContext): StellaType {
+    override fun visitTypeNat(ctx: TypeNatContext): StellaNat {
         return StellaNat
     }
 
-    override fun visitTypeFun(ctx: TypeFunContext): StellaType = with(ctx) {
+    override fun visitTypeFun(ctx: TypeFunContext): StellaFunction = with(ctx) {
         return StellaFunction(
             resolve(paramTypes.first()),
             resolve(returnType)
@@ -24,23 +24,27 @@ class StellaTypeResolver : StellaParserBaseVisitor<StellaType>() {
         return resolve(type_)
     }
 
-    override fun visitTypeUnit(ctx: TypeUnitContext): StellaType {
+    override fun visitTypeUnit(ctx: TypeUnitContext): StellaUnit {
         return StellaUnit
     }
 
-    override fun visitTypeTuple(ctx: TypeTupleContext): StellaType = with(ctx) {
+    override fun visitTypeTuple(ctx: TypeTupleContext): StellaTuple = with(ctx) {
         return StellaTuple(types.map { resolve(it) })
     }
 
-    override fun visitTypeRecord(ctx: TypeRecordContext): StellaType = with(ctx) {
-        return StellaRecord(fieldTypes.associate { it.label.text to resolve(it.type_) })
+    override fun visitTypeRecord(ctx: TypeRecordContext): StellaRecord = with(ctx) {
+        return StellaRecord(fieldTypes.map { visitRecordFieldType(it) }.toSet())
     }
 
-    override fun visitTypeList(ctx: TypeListContext): StellaType = with(ctx) {
+    override fun visitRecordFieldType(ctx: RecordFieldTypeContext): StellaField = with(ctx) {
+        return StellaField(label.text, resolve(type_))
+    }
+
+    override fun visitTypeList(ctx: TypeListContext): StellaList = with(ctx) {
         return StellaList(resolve(types.first()))
     }
 
-    override fun visitTypeSum(ctx: TypeSumContext): StellaType = with(ctx) {
+    override fun visitTypeSum(ctx: TypeSumContext): StellaSum = with(ctx) {
         return StellaSum(resolve(left), resolve(right))
     }
 

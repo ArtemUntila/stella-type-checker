@@ -26,7 +26,7 @@ data class StellaFunction(val paramType: StellaType, val returnType: StellaType)
         infix fun StellaType.arrow(other: StellaType) = StellaFunction(this, other)
     }
 
-    override fun toString() = "($paramType->$returnType)"
+    override fun toString() = "($paramType -> $returnType)"
 }
 
 object StellaUnit : StellaType {
@@ -37,11 +37,14 @@ data class StellaTuple(val types: List<StellaType>) : StellaType {
 
     constructor(vararg types: StellaType) : this(types.toList())
 
-    override fun toString() = types.joinToString(",", "{", "}")
+    override fun toString() = types.joinToString(", ", "{", "}")
 }
 
-data class StellaRecord(val fields: Map<String, StellaType>) : StellaType {
-    override fun toString() = fields.map { (l, t) -> "$l:$t"}.joinToString(",", "{", "}")
+data class StellaRecord(val fields: Set<StellaField>) : StellaType {
+
+    operator fun get(label: String): StellaField? = fields.firstOrNull { label == it.label }
+
+    override fun toString() = fields.joinToString(", ", "{ ", " }")
 }
 
 data class StellaList(val type: StellaType) : StellaType {
@@ -49,5 +52,9 @@ data class StellaList(val type: StellaType) : StellaType {
 }
 
 data class StellaSum(val left: StellaType, val right: StellaType) : StellaType {
-    override fun toString() = "$left+$right"
+    override fun toString() = "$left + $right"
+}
+
+data class StellaField(val label: String, val type: StellaType) : StellaType {
+    override fun toString() = "$label : $type"
 }

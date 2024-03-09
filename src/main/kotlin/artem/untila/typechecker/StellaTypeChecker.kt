@@ -133,21 +133,21 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     // #records
     override fun visitRecord(ctx: RecordContext): StellaType = with(ctx) {
         val binds = bindings.associate { it.name.text to it.rhs }
-        val fields = when (val record = expectedType) {
+        val labelToType = when (val record = expectedType) {
             is StellaRecord -> {
-                if (binds.keys.any { !record.fields.contains(it) }) throw UnexpectedRecordFields()
-                if (record.fields.keys.any { !binds.contains(it) }) throw MissingRecordFields()
-                binds.mapValues { (l, it) -> it.checkOrThrow(record.fields[l]!!) }
+                if (binds.keys.any { record[it] == null }) throw UnexpectedRecordFields()
+                if (record.fields.any { !binds.contains(it.label) }) throw MissingRecordFields()
+                binds.mapValues { (l, it) -> it.checkOrThrow(record[l]!!.type) }
             }
             is StellaAny -> binds.mapValues { (_, it) -> it.check(StellaAny) }
             else -> throw UnexpectedRecord()
         }
-        return StellaRecord(fields)
+        return StellaRecord(labelToType.map { (l, t) -> StellaField(l, t)}.toSet())
     }
 
     override fun visitDotRecord(ctx: DotRecordContext): StellaType = with(ctx) {
         val record = expr_.check(StellaAny) as? StellaRecord ?: throw NotARecord()
-        return record.fields[label.text] ?: throw UnexpectedFieldAccess()
+        return record[label.text]?.type ?: throw UnexpectedFieldAccess()
     }
 
     // #let-bindings
