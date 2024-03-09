@@ -46,3 +46,6 @@ class AmbiguousVariantType : TypeCheckError("AMBIGUOUS_VARIANT_TYPE")
 class IllegalEmptyMatching : TypeCheckError("ILLEGAL_EMPTY_MATCHING")
 class NonexhaustiveMatchPatterns : TypeCheckError("NONEXHAUSTIVE_MATCH_PATTERNS")
 class UnexpectedPatternForType : TypeCheckError("UNEXPECTED_PATTERN_FOR_TYPE")
+// Custom
+class UnsupportedMatchType : TypeCheckError("UNSUPPORTED_MATCH_TYPE")
+class UnsupportedPatternStructure : TypeCheckError("UNSUPPORTED_PATTERN_STRUCTURE")

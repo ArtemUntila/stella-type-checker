@@ -2,6 +2,7 @@ package artem.untila.typechecker
 
 import StellaParser.*
 import artem.untila.typechecker.error.*
+import artem.untila.typechecker.pattern.StellaPatternMatcher
 import artem.untila.typechecker.types.*
 import artem.untila.typechecker.types.StellaField.Companion.colon
 import artem.untila.typechecker.types.StellaFunction.Companion.arrow
@@ -243,6 +244,11 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
             null -> throw AmbiguousVariantType()
             else -> throw UnexpectedVariant()
         }
+    }
+
+    // Pattern-matching
+    override fun visitMatch(ctx: MatchContext): StellaType {
+        return StellaPatternMatcher(expectedType, this).visitMatch(ctx)
     }
 
     // Utils
