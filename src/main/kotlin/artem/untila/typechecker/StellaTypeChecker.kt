@@ -4,7 +4,6 @@ import StellaParser.*
 import artem.untila.typechecker.error.*
 import artem.untila.typechecker.types.*
 import artem.untila.typechecker.types.StellaFunction.Companion.arrow
-import org.antlr.v4.runtime.ParserRuleContext
 import java.util.ArrayDeque
 
 class StellaTypeChecker : StellaVisitor<StellaType>() {
@@ -20,10 +19,10 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     // Language core
     // Program
     override fun visitProgram(ctx: ProgramContext): StellaType = with(ctx) {
-        val funVariables = decls.filterIsInstance<DeclFunContext>().map { it.toContextVariable() }
-        variableContext.pushAll(funVariables)
+        val funDecls = decls.filterIsInstance<DeclFunContext>()
+        variableContext.pushAll(funDecls.map { it.toContextVariable() })
 
-        decls.forEach { it.check() }
+        funDecls.forEach { visitDeclFun(it) }
 
         if (variableContext["main"] == null) throw MissingMain()
         return StellaType { "Program" }
@@ -36,7 +35,9 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
 
         // #nested-function-declarations
         localDecls.filterIsInstance<DeclFunContext>().forEach {
-            it.check(variables = variables.toTypedArray())
+            variableContext.with(variables) {
+                visitDeclFun(it)
+            }
             variables.add(it.toContextVariable())
         }
 
@@ -222,15 +223,12 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     }
 
     // Utils
-    internal fun ParserRuleContext.check(type: StellaType? = null, vararg variables: ContextVariable): StellaType {
-        if (type != null) expectedTypes.push(type)
-        variableContext.pushAll(*variables)
-
-        val checkedType = accept(this@StellaTypeChecker)
-
-        if (type != null) expectedTypes.pop()
-        variableContext.pop(variables.size)
-
+    internal fun ExprContext.check(type: StellaType, vararg variables: ContextVariable): StellaType {
+        expectedTypes.push(type)
+        val checkedType = variableContext.with(*variables) {
+            accept(this@StellaTypeChecker)
+        }
+        expectedTypes.pop()
         return checkedType
     }
 
