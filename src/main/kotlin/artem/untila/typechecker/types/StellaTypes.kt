@@ -47,3 +47,7 @@ data class StellaRecord(val fields: Map<String, StellaType>) : StellaType {
 data class StellaList(val type: StellaType) : StellaType {
     override fun toString() = "[$type]"
 }
+
+data class StellaSum(val left: StellaType, val right: StellaType) : StellaType {
+    override fun toString() = "$left+$right"
+}

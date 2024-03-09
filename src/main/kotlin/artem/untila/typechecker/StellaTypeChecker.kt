@@ -209,6 +209,18 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
         return block(list)
     }
 
+    // #sum-types
+    override fun visitInl(ctx: InlContext): StellaType = visitInjection(ctx.expr_) { it.left }
+    override fun visitInr(ctx: InrContext): StellaType = visitInjection(ctx.expr_) { it.right }
+
+    private inline fun visitInjection(expr: ExprContext, block: (StellaSum) -> StellaType): StellaType {
+        return when (val sum = expectedType) {
+            is StellaSum -> sum.also { expr.checkOrThrow(block(it)) }
+            is StellaAny -> throw AmbiguousSumType()
+            else -> throw UnexpectedInjection()
+        }
+    }
+
     // Utils
     internal fun ParserRuleContext.check(type: StellaType? = null, vararg variables: ContextVariable): StellaType {
         if (type != null) expectedTypes.push(type)

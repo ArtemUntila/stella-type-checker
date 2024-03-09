@@ -40,5 +40,9 @@ class StellaTypeResolver : StellaParserBaseVisitor<StellaType>() {
         return StellaList(resolve(types.first()))
     }
 
+    override fun visitTypeSum(ctx: TypeSumContext): StellaType = with(ctx) {
+        return StellaSum(resolve(left), resolve(right))
+    }
+
     private fun resolve(typeContext: StellatypeContext): StellaType = typeContext.accept(this)
 }
