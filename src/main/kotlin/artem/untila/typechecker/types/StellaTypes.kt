@@ -4,14 +4,6 @@ fun interface StellaType {
     override fun toString(): String
 }
 
-object StellaAny : StellaType {
-    override fun toString() = "Any"
-
-    override fun equals(other: Any?): Boolean {
-        return other is StellaType
-    }
-}
-
 object StellaNat : StellaType {
     override fun toString()= "Nat"
 }
