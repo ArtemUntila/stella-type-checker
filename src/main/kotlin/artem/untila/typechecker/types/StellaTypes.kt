@@ -12,13 +12,15 @@ object StellaBool : StellaType {
     override fun toString() = "Bool"
 }
 
-data class StellaFunction(val paramType: StellaType, val returnType: StellaType) : StellaType {
+data class StellaFunction(val paramTypes: List<StellaType>, val returnType: StellaType) : StellaType {
+
+    val params = paramTypes.size
 
     companion object {
-        infix fun StellaType.arrow(other: StellaType) = StellaFunction(this, other)
+        infix fun StellaType.arrow(other: StellaType) = StellaFunction(listOf(this), other)
     }
 
-    override fun toString() = "($paramType -> $returnType)"
+    override fun toString() = "fn (${paramTypes.joinToString(", ")}) -> $returnType"
 }
 
 object StellaUnit : StellaType {

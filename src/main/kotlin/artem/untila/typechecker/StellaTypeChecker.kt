@@ -25,13 +25,15 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
 
         funDecls.forEach { visitDeclFun(it) }
 
-        if (variableContext["main"] == null) throw MissingMain()
+        val main = variableContext["main"] ?: throw MissingMain()
+        if ((main.type as StellaFunction).params != 1) throw IncorrectArityOfMain()
+
         return StellaType { "Program" }
     }
 
     // Function declaration
     override fun visitDeclFun(ctx: DeclFunContext): StellaType = with(ctx) {
-        val variables = mutableListOf(paramDecl.toContextVariable())
+        val variables = paramDecls.mapTo(mutableListOf()) { it.toContextVariable() }
         val function = toStellaFunction()
 
         // #nested-function-declarations
@@ -83,25 +85,32 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
 
     // First-class functions
     override fun visitAbstraction(ctx: AbstractionContext): StellaType = with(ctx) {
-        val param = paramDecl.toContextVariable()
+        val params = paramDecls.map { it.toContextVariable() }
         val expectedReturnType = when (val function = expectedType) {
             is StellaFunction -> function.let {
-                if (it.paramType != param.type) {
-                    throw UnexpectedTypeForParameter("${it.paramType}", "${param.type}", param.name, src)
+                if (it.params != params.size) {
+                    throw UnexpectedNumberOfParametersInLambda(it.params, "$it", params.size, src)
+                }
+                it.paramTypes.forEachIndexed { i, type ->
+                    val param = params[i]
+                    if (type != param.type) throw UnexpectedTypeForParameter("$type", "${param.type}", param.name, src)
                 }
                 it.returnType
             }
             null -> null
             else -> throw UnexpectedLambda("$function", src)
         }
-        val returnType = returnExpr.checkOrThrow(expectedReturnType, param)
-        return StellaFunction(param.type, returnType)
+        return StellaFunction(
+            params.map { it.type },
+            returnExpr.checkOrThrow(expectedReturnType, *params.toTypedArray())
+        )
     }
 
     override fun visitApplication(ctx: ApplicationContext): StellaType = with(ctx) {
         `fun`.check().let {
             if (it !is StellaFunction) throw NotAFunction("$it", `fun`.src, src)
-            args.first().checkOrThrow(it.paramType)
+            if (it.params != args.size) throw IncorrectNumberOfArguments(it.params, `fun`.src, "$it", args.size, src)
+            args.forEachIndexed { i, expr -> expr.checkOrThrow(it.paramTypes[i]) }
             it.returnType
         }
     }
@@ -193,17 +202,11 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
 
     // #fixpoint-combinator
     override fun visitFix(ctx: FixContext): StellaType = with(ctx) {
-        val function = when (val t = expectedType) {
-            null -> expr_.check().let {
-                if (it !is StellaFunction) throw NotAFunction("$it", expr_.src, src)
-                val expected = it.paramType arrow it.paramType
-                if (expected != it) throw UnexpectedTypeForExpression("$expected", "$it", src)
-                return@let it
-            }
-            // Not necessary check, just trying to follow online-interpreter behaviour
-            else -> expr_.checkOrThrow(t arrow t)
+        val type = expectedType ?: expr_.check().let {
+            if (it !is StellaFunction) throw NotAFunction("$it", expr_.src, src)
+            it.returnType
         }
-        return function.returnType
+        return expr_.checkOrThrow(type arrow type).returnType
     }
 
     // #lists
@@ -295,6 +298,9 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     // Sugary sugar
     private fun ParamDeclContext.toContextVariable() = ContextVariable(name.text, paramType.resolve())
     private fun DeclFunContext.toContextVariable() = ContextVariable(name.text, toStellaFunction())
-    private fun DeclFunContext.toStellaFunction() = StellaFunction(paramDecl.paramType.resolve(), returnType.resolve())
+    private fun DeclFunContext.toStellaFunction(): StellaFunction {
+        return StellaFunction(paramDecls.map { it.paramType.resolve() }, returnType.resolve())
+    }
+
     private fun StellatypeContext.resolve(): StellaType = accept(typeResolver)
 }

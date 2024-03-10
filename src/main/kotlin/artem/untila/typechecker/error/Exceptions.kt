@@ -217,3 +217,24 @@ class UnexpectedPatternForType(pattern: String, expected: String) : TypeCheckErr
         "when pattern matching is expected for type" to expected
     )
 )
+
+// #nullary- and #multiparameter-functions
+class IncorrectArityOfMain : TypeCheckError(
+    "INCORRECT_ARITY_OF_MAIN",
+    "main function must have exactly one parameter"
+)
+
+class IncorrectNumberOfArguments(n: Int, expr: String, expected: String, m: Int, ctx: String) : TypeCheckError(
+    "INCORRECT_NUMBER_OF_ARGUMENTS", formatted(
+        "expected $n arguments for the function" to expr,
+        "of type" to expected,
+        "but got $m arguments in the function call" to ctx
+    )
+)
+
+class UnexpectedNumberOfParametersInLambda(n: Int, expected: String, m: Int, expr: String) : TypeCheckError(
+    "UNEXPECTED_NUMBER_OF_PARAMETERS_IN_LAMBDA", formatted(
+        "expected $n parameters for a function type" to expected,
+        "but got $m parameters in function" to expr
+    )
+)

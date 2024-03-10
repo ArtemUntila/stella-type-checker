@@ -15,7 +15,7 @@ class StellaTypeResolver : StellaParserBaseVisitor<StellaType>() {
 
     override fun visitTypeFun(ctx: TypeFunContext): StellaFunction = with(ctx) {
         return StellaFunction(
-            resolve(paramTypes.first()),
+            paramTypes.map { resolve(it) },
             resolve(returnType)
         )
     }
