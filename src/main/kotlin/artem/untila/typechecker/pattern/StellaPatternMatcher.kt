@@ -15,29 +15,31 @@ class StellaPatternMatcher(
     private lateinit var exhaustivenessChecker: ExhaustivenessChecker
 
     override fun visitMatch(ctx: MatchContext): StellaType {
-        if (ctx.cases.isEmpty()) throw IllegalEmptyMatching()
+        if (ctx.cases.isEmpty()) throw IllegalEmptyMatching(ctx.src)
 
-        matchType = typeChecker.run { ctx.expr().check(null) }
-        exhaustivenessChecker = ExhaustivenessChecker.forType(matchType) ?: throw UnsupportedMatchType()
+        matchType = typeChecker.run { ctx.expr().check() }
+        exhaustivenessChecker = ExhaustivenessChecker.forType(matchType)
 
         ctx.cases.forEach { visitMatchCase(it) }
 
-        if (!exhaustivenessChecker.isExhausted && caseVariable.type != matchType) throw NonexhaustiveMatchPatterns()
+        if (!exhaustivenessChecker.isExhausted && caseVariable.type != matchType) {
+            throw NonexhaustiveMatchPatterns(ctx.src, exhaustivenessChecker.types.map { "$it" })
+        }
 
         return expectedType!!
     }
 
     override fun visitMatchCase(ctx: MatchCaseContext) {
         ctx.pattern_.accept(this@StellaPatternMatcher)
-        if (!this::caseVariable.isInitialized) throw UnsupportedPatternStructure()
+        if (!this::caseVariable.isInitialized) throw UnexpectedPatternForType(ctx.pattern_.src, "$matchType")
         typeChecker.run {
             expectedType = ctx.expr_.checkOrThrow(expectedType, caseVariable.toContextVariable())
         }
     }
 
     // #sum-types
-    override fun visitPatternInl(ctx: PatternInlContext) = visitPattern<StellaSum>(ctx) { left to left }
-    override fun visitPatternInr(ctx: PatternInrContext) = visitPattern<StellaSum>(ctx) { right to right }
+    override fun visitPatternInl(ctx: PatternInlContext) = visitPattern<StellaSum>(ctx) { inl to left }
+    override fun visitPatternInr(ctx: PatternInrContext) = visitPattern<StellaSum>(ctx) { inr to right }
 
     // #variants
     override fun visitPatternVariant(ctx: PatternVariantContext) = visitPattern<StellaVariant>(ctx) {
@@ -50,12 +52,12 @@ class StellaPatternMatcher(
     ) {
         when (val t = matchType) {
             is T -> {
-                val (patternType, variableType) = block(t) ?: throw UnexpectedPatternForType()
+                val (patternType, variableType) = block(t) ?: throw UnexpectedPatternForType(pattern.src, "$t")
                 super.visitChildren(pattern)
                 caseVariable.type = variableType
                 exhaustivenessChecker.accept(pattern, patternType)
             }
-            else -> throw UnexpectedPatternForType()
+            else -> throw UnexpectedPatternForType(pattern.src, "$t")
         }
     }
 

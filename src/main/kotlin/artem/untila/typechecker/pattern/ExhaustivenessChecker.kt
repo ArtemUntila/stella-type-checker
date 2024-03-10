@@ -6,23 +6,24 @@ import artem.untila.typechecker.types.*
 sealed interface ExhaustivenessChecker {
 
     companion object {
-        fun forType(type: StellaType): ExhaustivenessChecker? = when (type) {
+        fun forType(type: StellaType): ExhaustivenessChecker = when (type) {
             is StellaSum -> ExhaustivenessCheckerSum(type)
             is StellaVariant -> ExhaustivenessCheckerVariant(type)
-            else -> null
+            else -> ExhaustivenessCheckerBase(type)
         }
     }
 
+    val types: Collection<StellaType>
     val isExhausted: Boolean
 
     fun accept(pattern: PatternContext, type: StellaType)
 
 }
 
-abstract class ExhaustivenessCheckerBase(private val matchType: StellaType) : ExhaustivenessChecker {
+open class ExhaustivenessCheckerBase(private val matchType: StellaType) : ExhaustivenessChecker {
 
-    abstract val patterns: MutableCollection<Class<out PatternContext>>
-    abstract val types: MutableCollection<StellaType>
+    open val patterns: MutableCollection<Class<out PatternContext>> = mutableListOf()
+    override val types: MutableCollection<StellaType> = mutableListOf()
 
     private var containsSuperPattern = false
 
@@ -40,7 +41,7 @@ class ExhaustivenessCheckerSum(sum: StellaSum) : ExhaustivenessCheckerBase(sum) 
     override val patterns: MutableCollection<Class<out PatternContext>> = mutableListOf(
         PatternInlContext::class.java, PatternInrContext::class.java
     )
-    override val types: MutableCollection<StellaType> = mutableListOf(sum.left, sum.right)
+    override val types: MutableCollection<StellaType> = mutableListOf(sum.inl, sum.inr)
 }
 
 class ExhaustivenessCheckerVariant(variant: StellaVariant) : ExhaustivenessCheckerBase(variant) {

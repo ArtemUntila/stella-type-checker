@@ -27,12 +27,14 @@ object StellaUnit : StellaType {
 
 data class StellaTuple(val types: List<StellaType>) : StellaType {
 
-    constructor(vararg types: StellaType) : this(types.toList())
+    val length = types.size
 
     override fun toString() = types.joinToString(", ", "{", "}")
 }
 
 data class StellaRecord(val fields: List<StellaField>) : StellaType {
+
+    val labels = fields.map { it.label }
 
     operator fun get(label: String): StellaField? = fields.firstOrNull { label == it.label }
 
@@ -44,6 +46,10 @@ data class StellaList(val type: StellaType) : StellaType {
 }
 
 data class StellaSum(val left: StellaType, val right: StellaType) : StellaType {
+
+    val inl = StellaInjection("inl", left)
+    val inr = StellaInjection("inr", right)
+
     override fun toString() = "$left + $right"
 }
 
@@ -61,4 +67,8 @@ data class StellaField(val label: String, val type: StellaType) : StellaType {
     }
 
     override fun toString() = "$label : $type"
+}
+
+data class StellaInjection(val name: String, val type: StellaType) : StellaType {
+    override fun toString() = "$name($type)"
 }
