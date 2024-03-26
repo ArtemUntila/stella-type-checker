@@ -22,3 +22,15 @@ Type Checker supports language core features with following extensions:
 ## Tests
 * [Local](https://github.com/ArtemUntila/stella-type-checker/tree/master/src/test/resources)
 * [Origin repository](https://github.com/AbsoluteNikola/stella-tests)
+
+## Build and run
+
+Build:
+
+`gradlew jar`
+
+Run:
+
+`java -jar build/libs/stella-type-checker.jar`
+
+Type program source code and then send `EOF` (`Ctrl+D` for **\*nix**; `Enter`, `Ctrl+Z`, `Enter` for **Windows**)

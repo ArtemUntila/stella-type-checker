@@ -34,4 +34,16 @@ tasks {
     compileTestKotlin {
         dependsOn("generateTestGrammarSource")
     }
+
+    jar {
+        archiveFileName = "stella-type-checker.jar"
+        manifest {
+            attributes("Main-Class" to "artem.untila.typechecker.MainKt")
+        }
+        configurations.runtimeClasspath.get().forEach {
+            from(project.zipTree(it)) {
+                duplicatesStrategy = DuplicatesStrategy.INCLUDE
+            }
+        }
+    }
 }
