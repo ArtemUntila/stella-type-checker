@@ -14,16 +14,16 @@ class StellaTypecheckerTest {
         const val PRINT_SRC = true
         const val PRINT_REPORT = true
 
-        fun resource(name: String) = File("src/test/resources", name)
+        fun testDir(name: String) = File("stella-tests", name)
     }
 
     @TestFactory
-    fun ok(): List<DynamicTest> = resource("ok").listFiles()!!.map {
+    fun ok(): List<DynamicTest> = testDir("ok").listFiles()!!.map {
         it.test(OK_TAG)
     }
 
     @TestFactory
-    fun bad(): List<DynamicContainer> = resource("bad").listFiles()!!.map { errorDir ->
+    fun bad(): List<DynamicContainer> = testDir("bad").listFiles()!!.map { errorDir ->
         val errorTag = errorDir.name
         dynamicContainer(errorTag, errorDir.listFiles()!!.map { it.test(errorTag) })
     }

@@ -19,18 +19,16 @@ Type Checker supports language core features with following extensions:
 * [Nullary Functions](https://fizruk.github.io/stella/site/extensions/syntax/#nullary-functions)
 * [Multiparameter Functions](https://fizruk.github.io/stella/site/extensions/syntax/#multiparameter-functions)
 
-## Tests
-* [Local](https://github.com/ArtemUntila/stella-type-checker/tree/master/src/test/resources)
-* [Origin repository](https://github.com/AbsoluteNikola/stella-tests)
-
 ## Build and run
 
 Build:
-
-`gradlew jar`
+```
+gradlew jar
+```
 
 Run:
-
-`java -jar build/libs/stella-type-checker.jar`
+```
+java -jar build/libs/stella-type-checker.jar
+```
 
 Type program source code and then send `EOF` (`Ctrl+D` for **\*nix**; `Enter`, `Ctrl+Z`, `Enter` for **Windows**)
