@@ -215,7 +215,7 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
         val type = when (val list = expectedType) {
             is StellaList -> list.type
             null -> {
-                if (exprs.isEmpty()) throw AmbiguousList()
+                if (exprs.isEmpty()) throw AmbiguousListType()
                 exprs.removeFirst().check()
             }
             else -> throw UnexpectedList("$list", src)

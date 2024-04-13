@@ -158,8 +158,8 @@ class UnexpectedList(expected: String, expr: String) : TypeCheckError(
     )
 )
 
-class AmbiguousList : TypeCheckError(
-    "AMBIGUOUS_LIST",
+class AmbiguousListType : TypeCheckError(
+    "AMBIGUOUS_LIST_TYPE",
     "type inference of empty lists is not supported (use type ascriptions)"
 )
 
