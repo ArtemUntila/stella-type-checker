@@ -275,6 +275,12 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
         return StellaPatternMatcher(expectedType, this).visitMatch(ctx)
     }
 
+    // #sequencing
+    override fun visitSequence(ctx: SequenceContext): StellaType = with(ctx) {
+        expr1.checkOrThrow(StellaUnit)
+        return expr2.check()
+    }
+
     // Utils
     internal fun ExprContext.check(expected: StellaType? = null, vararg variables: ContextVariable): StellaType {
         expectedTypes.addFirst(expected)
