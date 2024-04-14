@@ -22,7 +22,6 @@ object Formatter : AbstractParseTreeVisitor<String>() {
     override fun visitTerminal(node: TerminalNode): String {
         return when (val s = node.text) {
             "as" -> " as "
-            ";" -> ""
             "," -> ", "
             ":" -> " : "
             "{" -> if (last != null && last != ' ') " { " else "{ "
@@ -37,6 +36,8 @@ object Formatter : AbstractParseTreeVisitor<String>() {
             "|>" -> " |>"
             "|" -> " | "
             "=>" -> " => "
+            ":=" -> " := "
+            ";" -> "; "
             else -> s
         }.also { sb.append(it) }
     }

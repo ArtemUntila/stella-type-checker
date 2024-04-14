@@ -62,6 +62,10 @@ data class StellaVariant(val fields: List<StellaField>) : StellaType {
     override fun toString() = fields.joinToString(", ", "<| ", " |>")
 }
 
+data class StellaRef(val type: StellaType) : StellaType {
+    override fun toString() = "&$type"
+}
+
 data class StellaField(val label: String, val type: StellaType) : StellaType {
 
     companion object {

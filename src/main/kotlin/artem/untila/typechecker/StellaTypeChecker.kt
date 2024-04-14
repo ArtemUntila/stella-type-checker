@@ -281,6 +281,34 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
         return expr2.check()
     }
 
+    // #references
+    override fun visitRef(ctx: RefContext): StellaType = with(ctx) {
+        expectedType?.let {
+            if (it !is StellaRef) throw UnexpectedReference("$it", ctx.src)
+        }
+        return StellaRef(expr_.check())
+    }
+
+    override fun visitDeref(ctx: DerefContext): StellaType = with(ctx) {
+        val ref = expr_.check()
+        if (ref !is StellaRef) throw NotAReference("$ref", expr_.src, ctx.src)
+        return ref.type
+    }
+
+    override fun visitAssign(ctx: AssignContext): StellaType = with(ctx) {
+        val ref = lhs.check()
+        if (ref !is StellaRef) throw NotAReference("$ref", lhs.src, ctx.src)
+        rhs.checkOrThrow(ref.type)
+        return StellaUnit
+    }
+
+    override fun visitConstMemory(ctx: ConstMemoryContext): StellaType {
+        return when (val type = expectedType) {
+            is StellaRef -> type
+            else -> throw UnexpectedMemoryAddress("$type", ctx.src)
+        }
+    }
+
     // Utils
     internal fun ExprContext.check(expected: StellaType? = null, vararg variables: ContextVariable): StellaType {
         expectedTypes.addFirst(expected)

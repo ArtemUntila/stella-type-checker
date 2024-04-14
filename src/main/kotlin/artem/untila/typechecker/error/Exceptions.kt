@@ -238,3 +238,26 @@ class UnexpectedNumberOfParametersInLambda(n: Int, expected: String, m: Int, exp
         "but got $m parameters in function" to expr
     )
 )
+
+// #references
+class UnexpectedReference(expected: String, expr: String) : TypeCheckError(
+    "UNEXPECTED_REFERENCE", formatted(
+        "expected an expression of a non-reference type" to expected,
+        "but got a new reference" to expr
+    )
+)
+
+class NotAReference(actual: String, expr: String, ctx: String) : TypeCheckError(
+    "NOT_A_REFERENCE", formatted(
+        "expected a reference type but got" to actual,
+        "for the expression" to expr,
+        "in the expression" to ctx
+    )
+)
+
+class UnexpectedMemoryAddress(expected: String, address: String) : TypeCheckError(
+    "UNEXPECTED_MEMORY_ADDRESS", formatted(
+        "expected an expression of a non-reference type" to expected,
+        "but got a bare memory address" to address
+    )
+)
