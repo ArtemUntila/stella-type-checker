@@ -20,6 +20,8 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     // Language core
     // Program
     override fun visitProgram(ctx: ProgramContext): StellaType = with(ctx) {
+        decls.filterIsInstance<DeclExceptionTypeContext>().forEach { visitDeclExceptionType(it) }
+
         val funDecls = decls.filterIsInstance<DeclFunContext>()
         variableContext.pushAll(funDecls.map { it.toContextVariable() })
 
@@ -312,6 +314,43 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     // #panic
     override fun visitPanic(ctx: PanicContext): StellaType {
         return expectedType ?: throw AmbiguousPanicType()
+    }
+
+    // #exceptions, #exception-type-declaration
+    private var exceptionType: StellaType? = null
+
+    override fun visitDeclExceptionType(ctx: DeclExceptionTypeContext): StellaType {
+        exceptionType = ctx.exceptionType.resolve()
+        return StellaUnit
+    }
+
+    override fun visitThrow(ctx: ThrowContext): StellaType = with(ctx) {
+        val excType = exceptionType ?: throw ExceptionTypeNotDeclared()
+        return when (val type = expectedType) {
+            null -> throw AmbiguousThrowType()
+            else -> type.also { expr_.check(excType) }
+        }
+    }
+
+    override fun visitTryCatch(ctx: TryCatchContext): StellaType = with(ctx) {
+        val type = tryExpr.checkOrThrow(expectedType)
+        val excType = exceptionType ?: throw ExceptionTypeNotDeclared()
+        // 267: Doubtful but okay
+        val matcher = StellaPatternMatcher(expectedType = type, this@StellaTypeChecker).apply {
+            matchType = excType
+        }
+        val matchDelegate = MatchCaseContext(null, -1).apply {
+            pattern_ = pat
+            expr_ = fallbackExpr
+        }
+        matcher.visitMatchCase(matchDelegate)
+
+        return type
+    }
+
+    override fun visitTryWith(ctx: TryWithContext): StellaType = with(ctx) {
+        val type = tryExpr.checkOrThrow(expectedType)
+        return fallbackExpr.checkOrThrow(type)
     }
 
     // Utils

@@ -267,3 +267,14 @@ class AmbiguousPanicType : TypeCheckError(
     "AMBIGUOUS_PANIC_TYPE",
     "cannot infer type for panic (use type ascriptions or enable #ambiguous-type-as-bottom)"
 )
+
+// #exceptions, #exception-type-declaration
+class ExceptionTypeNotDeclared : TypeCheckError(
+    "EXCEPTION_TYPE_NOT_DECLARED",
+    "cannot throw exceptions, because exception type is not declared"
+)
+
+class AmbiguousThrowType : TypeCheckError(
+    "AMBIGUOUS_THROW_TYPE",
+    "cannot infer type for throw (use type ascriptions or enable #ambiguous-type-as-bottom)"
+)

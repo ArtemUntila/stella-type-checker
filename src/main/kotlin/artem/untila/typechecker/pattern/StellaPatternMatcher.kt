@@ -10,20 +10,22 @@ class StellaPatternMatcher(
     private val typeChecker: StellaTypeChecker
 ) : StellaVisitor<Any>() {
 
-    private lateinit var matchType: StellaType
+    internal lateinit var matchType: StellaType
     private lateinit var caseVariable: CaseVariable
-    private lateinit var exhaustivenessChecker: ExhaustivenessChecker
+    private var exhaustivenessChecker: ExhaustivenessChecker? = null
 
     override fun visitMatch(ctx: MatchContext): StellaType {
         if (ctx.cases.isEmpty()) throw IllegalEmptyMatching(ctx.src)
 
         matchType = typeChecker.run { ctx.expr().check() }
-        exhaustivenessChecker = ExhaustivenessChecker.forType(matchType)
+
+        val exhChecker = ExhaustivenessChecker.forType(matchType)
+        exhaustivenessChecker = exhChecker
 
         ctx.cases.forEach { visitMatchCase(it) }
 
-        if (!exhaustivenessChecker.isExhausted && caseVariable.type != matchType) {
-            throw NonexhaustiveMatchPatterns(ctx.src, exhaustivenessChecker.types.map { "$it" })
+        if (!exhChecker.isExhausted && caseVariable.type != matchType) {
+            throw NonexhaustiveMatchPatterns(ctx.src, exhChecker.types.map { "$it" })
         }
 
         return expectedType!!
@@ -55,7 +57,7 @@ class StellaPatternMatcher(
                 val (patternType, variableType) = block(t) ?: throw UnexpectedPatternForType(pattern.src, "$t")
                 super.visitChildren(pattern)
                 caseVariable.type = variableType
-                exhaustivenessChecker.accept(pattern, patternType)
+                exhaustivenessChecker?.accept(pattern, patternType)
             }
             else -> throw UnexpectedPatternForType(pattern.src, "$t")
         }
