@@ -9,8 +9,6 @@ import artem.untila.typechecker.types.StellaFunction.Companion.arrow
 
 class StellaTypeChecker : StellaVisitor<StellaType>() {
 
-    private val typeResolver = StellaTypeResolver()
-
     private val variableContext = VariableContext()
 
     private val expectedTypes = ArrayDeque<StellaType?>()  // for debugging purposes
@@ -380,5 +378,5 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
         return StellaFunction(paramDecls.map { it.paramType.resolve() }, returnType.resolve())
     }
 
-    private fun StellatypeContext.resolve(): StellaType = accept(typeResolver)
+    private fun StellatypeContext.resolve(): StellaType = StellaTypeResolver.resolve(this)
 }

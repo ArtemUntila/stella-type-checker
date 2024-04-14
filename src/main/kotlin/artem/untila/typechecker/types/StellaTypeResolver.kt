@@ -3,7 +3,7 @@ package artem.untila.typechecker.types
 import StellaParser.*
 import StellaParserBaseVisitor
 
-class StellaTypeResolver : StellaParserBaseVisitor<StellaType>() {
+object StellaTypeResolver : StellaParserBaseVisitor<StellaType>() {
 
     override fun visitTypeBool(ctx: TypeBoolContext): StellaBool {
         return StellaBool
@@ -60,5 +60,5 @@ class StellaTypeResolver : StellaParserBaseVisitor<StellaType>() {
         return StellaRef(resolve(type_))
     }
 
-    private fun resolve(typeContext: StellatypeContext): StellaType = typeContext.accept(this)
+    fun resolve(typeContext: StellatypeContext): StellaType = typeContext.accept(this)
 }
