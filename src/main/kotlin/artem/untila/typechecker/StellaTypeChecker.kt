@@ -309,6 +309,11 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
         }
     }
 
+    // #panic
+    override fun visitPanic(ctx: PanicContext): StellaType {
+        return expectedType ?: throw AmbiguousPanicType()
+    }
+
     // Utils
     internal fun ExprContext.check(expected: StellaType? = null, vararg variables: ContextVariable): StellaType {
         expectedTypes.addFirst(expected)
