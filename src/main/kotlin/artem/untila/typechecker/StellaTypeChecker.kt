@@ -9,6 +9,8 @@ import artem.untila.typechecker.types.StellaFunction.Companion.arrow
 
 class StellaTypeChecker : StellaVisitor<StellaType>() {
 
+    private val extensions = mutableSetOf<String>()
+
     private val variableContext = VariableContext()
 
     private val expectedTypes = ArrayDeque<StellaType?>()  // for debugging purposes
@@ -18,6 +20,7 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     // Language core
     // Program
     override fun visitProgram(ctx: ProgramContext): StellaType = with(ctx) {
+        extensions.forEach { it.accept(this@StellaTypeChecker) }
         decls.filterIsInstance<DeclExceptionTypeContext>().forEach { visitDeclExceptionType(it) }
 
         val funDecls = decls.filterIsInstance<DeclFunContext>()
@@ -29,6 +32,12 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
         if ((main.type as StellaFunction).params != 1) throw IncorrectArityOfMain()
 
         return StellaType { "Program" }
+    }
+
+    // Extensions
+    override fun visitAnExtension(ctx: AnExtensionContext): StellaType = with(ctx) {
+        extensionNames.forEach { extensions.add(it.text) }
+        return StellaUnit
     }
 
     // Function declaration
