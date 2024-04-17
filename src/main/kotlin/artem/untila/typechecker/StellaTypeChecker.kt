@@ -336,7 +336,7 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
         val excType = exceptionType ?: throw ExceptionTypeNotDeclared()
         return when (val type = expectedType) {
             null -> throw AmbiguousThrowType()
-            else -> type.also { expr_.check(excType) }
+            else -> type.also { expr_.checkOrThrow(excType) }
         }
     }
 
