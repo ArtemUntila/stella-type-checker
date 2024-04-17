@@ -10,6 +10,7 @@ import artem.untila.typechecker.types.StellaFunction.Companion.arrow
 class StellaTypeChecker : StellaVisitor<StellaType>() {
 
     private val extensions = mutableSetOf<String>()
+    private val structuralSubtyping: Boolean by lazy { extensions.contains("#structural-subtyping") }
 
     private val variableContext = VariableContext()
 
@@ -31,7 +32,7 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
         val main = variableContext["main"] ?: throw MissingMain()
         if ((main.type as StellaFunction).params != 1) throw IncorrectArityOfMain()
 
-        return StellaType { "Program" }
+        return StellaUnit
     }
 
     // Extensions
@@ -100,9 +101,13 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
                 if (it.params != params.size) {
                     throw UnexpectedNumberOfParametersInLambda(it.params, "$it", params.size, src)
                 }
-                it.paramTypes.forEachIndexed { i, type ->
-                    val param = params[i]
-                    if (type != param.type) throw UnexpectedTypeForParameter("$type", "${param.type}", param.name, src)
+                if (!structuralSubtyping) {
+                    it.paramTypes.forEachIndexed { i, type ->
+                        val param = params[i]
+                        if (type != param.type) {
+                            throw UnexpectedTypeForParameter("$type", "${param.type}", param.name, src)
+                        }
+                    }
                 }
                 it.returnType
             }
@@ -172,8 +177,10 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
 
         val fields = when (val record = expectedType) {
             is StellaRecord -> {
-                (binds.keys - record.labels).takeIf { it.isNotEmpty() }?.let {
-                    throw UnexpectedRecordFields(it, "$record", src)
+                if (!structuralSubtyping) {
+                    (binds.keys - record.labels).takeIf { it.isNotEmpty() }?.let {
+                        throw UnexpectedRecordFields(it, "$record", src)
+                    }
                 }
                 (record.labels - binds.keys).takeIf { it.isNotEmpty() }?.let {
                     throw MissingRecordFields(it, "$record", src)

@@ -1,5 +1,6 @@
 package artem.untila.typechecker.types
 
-fun interface StellaType {
+interface StellaType {
+
     override fun toString(): String
 }

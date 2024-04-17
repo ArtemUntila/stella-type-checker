@@ -1,7 +1,7 @@
 package artem.untila.typechecker.types
 
 object StellaNat : StellaType {
-    override fun toString()= "Nat"
+    override fun toString() = "Nat"
 }
 
 object StellaBool : StellaType {
