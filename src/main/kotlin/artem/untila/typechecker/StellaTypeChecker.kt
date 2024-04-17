@@ -299,7 +299,7 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     }
 
     override fun visitDeref(ctx: DerefContext): StellaType = with(ctx) {
-        val ref = expr_.check()
+        val ref = expr_.check(expectedType?.let { StellaRef(it) })
         if (ref !is StellaRef) throw NotAReference("$ref", expr_.src, ctx.src)
         return ref.type
     }
@@ -314,6 +314,7 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     override fun visitConstMemory(ctx: ConstMemoryContext): StellaType {
         return when (val type = expectedType) {
             is StellaRef -> type
+            null -> throw AmbiguousReferenceType()
             else -> throw UnexpectedMemoryAddress("$type", ctx.src)
         }
     }

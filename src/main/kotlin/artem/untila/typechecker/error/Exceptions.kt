@@ -262,6 +262,11 @@ class UnexpectedMemoryAddress(expected: String, address: String) : TypeCheckErro
     )
 )
 
+class AmbiguousReferenceType : TypeCheckError(
+    "AMBIGUOUS_REFERENCE_TYPE",
+    "cannot infer a type of a bare memory address"
+)
+
 // #panic
 class AmbiguousPanicType : TypeCheckError(
     "AMBIGUOUS_PANIC_TYPE",
