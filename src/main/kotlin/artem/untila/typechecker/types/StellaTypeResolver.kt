@@ -56,8 +56,16 @@ object StellaTypeResolver : StellaParserBaseVisitor<StellaType>() {
         return StellaField(label.text, resolve(type_))
     }
 
-    override fun visitTypeRef(ctx: TypeRefContext): StellaType = with(ctx) {
+    override fun visitTypeRef(ctx: TypeRefContext): StellaRef = with(ctx) {
         return StellaRef(resolve(type_))
+    }
+
+    override fun visitTypeTop(ctx: TypeTopContext): StellaTop {
+        return StellaTop
+    }
+
+    override fun visitTypeBottom(ctx: TypeBottomContext): StellaBot {
+        return StellaBot
     }
 
     fun resolve(typeContext: StellatypeContext): StellaType = typeContext.accept(this)
