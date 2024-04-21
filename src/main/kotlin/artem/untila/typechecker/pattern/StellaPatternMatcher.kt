@@ -31,11 +31,13 @@ class StellaPatternMatcher(
         return expectedType!!
     }
 
-    override fun visitMatchCase(ctx: MatchCaseContext) {
+    override fun visitMatchCase(ctx: MatchCaseContext): StellaType {
         ctx.pattern_.accept(this@StellaPatternMatcher)
         if (!this::caseVariable.isInitialized) throw UnexpectedPatternForType(ctx.pattern_.src, "$matchType")
-        typeChecker.run {
-            expectedType = ctx.expr_.checkOrThrow(expectedType, caseVariable.toContextVariable())
+        return typeChecker.run {
+            ctx.expr_.checkOrThrow(expectedType, caseVariable.toContextVariable()).also {
+                expectedType = it
+            }
         }
     }
 

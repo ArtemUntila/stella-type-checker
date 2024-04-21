@@ -361,17 +361,8 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     override fun visitTryCatch(ctx: TryCatchContext): StellaType = with(ctx) {
         val type = tryExpr.checkOrThrow(expectedType)
         val excType = exceptionType ?: throw ExceptionTypeNotDeclared()
-        // 267: Doubtful but okay
-        val matcher = StellaPatternMatcher(expectedType = type, this@StellaTypeChecker).apply {
-            matchType = excType
-        }
-        val matchDelegate = MatchCaseContext(null, -1).apply {
-            pattern_ = pat
-            expr_ = fallbackExpr
-        }
-        matcher.visitMatchCase(matchDelegate)
 
-        return type
+        return pat.check(type, excType, fallbackExpr)
     }
 
     override fun visitTryWith(ctx: TryWithContext): StellaType = with(ctx) {
@@ -383,6 +374,15 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     override fun visitTypeCast(ctx: TypeCastContext): StellaType = with(ctx) {
         expr_.check()
         return type_.resolve()
+    }
+
+    // #try-cast-as
+    override fun visitTryCastAs(ctx: TryCastAsContext): StellaType = with(ctx) {
+        tryExpr.check()
+        val matchType = type_.resolve()
+
+        val resType = pattern_.check(expectedType, matchType, expr_)
+        return fallbackExpr.checkOrThrow(resType)
     }
 
     // Utils
@@ -407,6 +407,18 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
         return actual.takeIf { expected == null || expected == it } as? T ?: run {
             throw UnexpectedTypeForExpression("$expected", "$actual", src)
         }
+    }
+
+    private fun PatternContext.check(expType: StellaType?, matchType: StellaType, expr: ExprContext): StellaType {
+        // 267: Doubtful but okay
+        val matcher = StellaPatternMatcher(expType, this@StellaTypeChecker).also {
+            it.matchType = matchType
+        }
+        val matchCase = MatchCaseContext(null, -1).also {
+            it.pattern_ = this@check
+            it.expr_ = expr
+        }
+        return matcher.visitMatchCase(matchCase)
     }
 
     // Sugary sugar
