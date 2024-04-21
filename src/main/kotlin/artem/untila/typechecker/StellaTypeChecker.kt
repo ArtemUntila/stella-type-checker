@@ -3,6 +3,7 @@ package artem.untila.typechecker
 import StellaParser.*
 import artem.untila.typechecker.error.*
 import artem.untila.typechecker.pattern.StellaPatternMatcher
+import artem.untila.typechecker.subtyping.isSubtypeOf
 import artem.untila.typechecker.types.*
 import artem.untila.typechecker.types.StellaField.Companion.colon
 import artem.untila.typechecker.types.StellaFunction.Companion.arrow
@@ -17,6 +18,9 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     private val expectedTypes = ArrayDeque<StellaType?>()  // for debugging purposes
     private val expectedType: StellaType?
         get() = expectedTypes.first()
+
+    private val anyTypeIsExpected: Boolean
+        get() = expectedType == null || (structuralSubtyping && expectedType == StellaTop)
 
     // Language core
     // Program
@@ -96,22 +100,23 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     // First-class functions
     override fun visitAbstraction(ctx: AbstractionContext): StellaType = with(ctx) {
         val params = paramDecls.map { it.toContextVariable() }
-        val expectedReturnType = when (val function = expectedType) {
-            is StellaFunction -> function.let {
-                if (it.params != params.size) {
-                    throw UnexpectedNumberOfParametersInLambda(it.params, "$it", params.size, src)
+        val function = expectedType
+        val expectedReturnType = when {
+            function is StellaFunction -> {
+                if (function.params != params.size) {
+                    throw UnexpectedNumberOfParametersInLambda(function.params, "$function", params.size, src)
                 }
                 if (!structuralSubtyping) {
-                    it.paramTypes.forEachIndexed { i, type ->
+                    function.paramTypes.forEachIndexed { i, type ->
                         val param = params[i]
                         if (type != param.type) {
                             throw UnexpectedTypeForParameter("$type", "${param.type}", param.name, src)
                         }
                     }
                 }
-                it.returnType
+                function.returnType
             }
-            null -> null
+            anyTypeIsExpected -> null
             else -> throw UnexpectedLambda("$function", src)
         }
         return StellaFunction(
@@ -139,14 +144,15 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
 
     // #pairs and #tuples
     override fun visitTuple(ctx: TupleContext): StellaType = with(ctx) {
-        val types = when (val tuple = expectedType) {
-            is StellaTuple -> {
+        val tuple = expectedType
+        val types = when {
+            tuple is StellaTuple -> {
                 if (tuple.length != exprs.size) {
                     throw UnexpectedTupleLength(tuple.length, "$tuple", exprs.size, src)
                 }
                 exprs.mapIndexed { j, it -> it.checkOrThrow(tuple.types[j]) }
             }
-            null -> exprs.map { it.check() }
+            anyTypeIsExpected -> exprs.map { it.check() }
             else -> throw UnexpectedTuple("$tuple", src)
         }
         return StellaTuple(types)
@@ -175,8 +181,9 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
             return@lazy res
         }
 
-        val fields = when (val record = expectedType) {
-            is StellaRecord -> {
+        val record = expectedType
+        val fields = when {
+            record is StellaRecord -> {
                 if (!structuralSubtyping) {
                     (binds.keys - record.labels).takeIf { it.isNotEmpty() }?.let {
                         throw UnexpectedRecordFields(it, "$record", src)
@@ -187,7 +194,7 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
                 }
                 record.fields.map { it.label colon binds[it.label]!!.checkOrThrow(it.type) }
             }
-            null -> binds.map { (label, expr) -> label colon expr.check() }
+            anyTypeIsExpected -> binds.map { (label, expr) -> label colon expr.check() }
             else -> throw UnexpectedRecord("$record", src)
         }
         return StellaRecord(fields)
@@ -228,9 +235,10 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     // #lists
     // DANGER: idio(ma)tic Kotlin zone!
     override fun visitList(ctx: ListContext): StellaType = with(ctx) {
-        val type = when (val list = expectedType) {
-            is StellaList -> list.type
-            null -> {
+        val list = expectedType
+        val type = when {
+            list is StellaList -> list.type
+            anyTypeIsExpected -> {
                 if (exprs.isEmpty()) throw AmbiguousListType()
                 exprs.removeFirst().check()
             }
@@ -241,12 +249,13 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     }
 
     override fun visitConsList(ctx: ConsListContext): StellaType = with(ctx) {
-        return when (val list = expectedType) {
-            is StellaList -> {
+        val list = expectedType
+        return when {
+            list is StellaList -> {
                 head.checkOrThrow(list.type)
                 tail.checkOrThrow(list)
             }
-            null -> StellaList(head.check()).also { tail.checkOrThrow(it) }
+            anyTypeIsExpected -> StellaList(head.check()).also { tail.checkOrThrow(it) }
             else -> throw UnexpectedList("$list", src)
         }
     }
@@ -267,9 +276,10 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     override fun visitInr(ctx: InrContext): StellaType = visitInjection(ctx, ctx.expr_) { it.right }
 
     private inline fun visitInjection(ctx: ExprContext, expr: ExprContext, block: (StellaSum) -> StellaType): StellaType {
-        return when (val sum = expectedType) {
-            is StellaSum -> sum.also { expr.checkOrThrow(block(it)) }
-            null -> throw AmbiguousSumType()
+        val sum = expectedType
+        return when {
+            sum is StellaSum -> sum.also { expr.checkOrThrow(block(it)) }
+            anyTypeIsExpected -> throw AmbiguousSumType()
             else -> throw UnexpectedInjection("$sum", ctx.src)
         }
     }
@@ -281,7 +291,10 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
                 val field = it[label.text] ?: throw UnexpectedVariantLabel(label.text, "$variant", src)
                 rhs.checkOrThrow(field.type)
             }
-            null -> throw AmbiguousVariantType()
+            null, StellaTop -> {  // following interpreter behaviour...
+                if (structuralSubtyping) StellaVariant(listOf(StellaField(label.text, rhs.check())))
+                else throw AmbiguousVariantType()
+            }
             else -> throw UnexpectedVariant("$variant", src)
         }
     }
@@ -299,10 +312,12 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
 
     // #references
     override fun visitRef(ctx: RefContext): StellaType = with(ctx) {
-        expectedType?.let {
-            if (it !is StellaRef) throw UnexpectedReference("$it", ctx.src)
+        val ref = expectedType
+        return when {
+            ref is StellaRef -> ref.also { expr_.checkOrThrow(ref.type) }
+            anyTypeIsExpected -> StellaRef(expr_.check())
+            else -> throw UnexpectedReference("$ref", ctx.src)
         }
-        return StellaRef(expr_.check())
     }
 
     override fun visitDeref(ctx: DerefContext): StellaType = with(ctx) {
@@ -320,7 +335,7 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
 
     override fun visitConstMemory(ctx: ConstMemoryContext): StellaType {
         return when (val type = expectedType) {
-            is StellaRef -> type
+            is StellaRef, StellaTop -> type  // following interpreter behaviour...
             null -> throw AmbiguousReferenceType()
             else -> throw UnexpectedMemoryAddress("$type", ctx.src)
         }
@@ -383,6 +398,10 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
         vararg variables: ContextVariable
     ): T {
         val actual = check(expected, *variables)
+        if (structuralSubtyping && expected != null) {
+            if (actual.isSubtypeOf(expected)) return expected
+            else throw UnexpectedSubtype("$expected", "$actual", src)
+        }
         return actual.takeIf { expected == null || expected == it } as? T ?: run {
             throw UnexpectedTypeForExpression("$expected", "$actual", src)
         }

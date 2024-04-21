@@ -283,3 +283,12 @@ class AmbiguousThrowType : TypeCheckError(
     "AMBIGUOUS_THROW_TYPE",
     "cannot infer type for throw (use type ascriptions or enable #ambiguous-type-as-bottom)"
 )
+
+// #structural-subtyping
+class UnexpectedSubtype(expected: String, actual: String, expr: String) : TypeCheckError(
+    "UNEXPECTED_SUBTYPE", formatted(
+        "expected a subtype of" to expected,
+        "but got" to actual,
+        "when typechecking expression" to expr
+    )
+)
