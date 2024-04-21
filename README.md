@@ -18,16 +18,24 @@ Type Checker supports language core features with following extensions:
 * [Nested Function Declarations](https://fizruk.github.io/stella/site/extensions/syntax/#nested-function-declarations)
 * [Nullary Functions](https://fizruk.github.io/stella/site/extensions/syntax/#nullary-functions)
 * [Multiparameter Functions](https://fizruk.github.io/stella/site/extensions/syntax/#multiparameter-functions)
+* [Sequencing](https://fizruk.github.io/stella/site/extensions/syntax/#sequencing)
+* [References](https://fizruk.github.io/stella/site/extensions/references/)
+* [Exceptions](https://fizruk.github.io/stella/site/extensions/exceptions/) (except `#open-variant-exceptions`)
+* [Structural Subtyping](https://fizruk.github.io/stella/site/extensions/subtyping/#structural-subtyping)
+* [Top](https://fizruk.github.io/stella/site/extensions/subtyping/#top-type) and [Bottom](https://fizruk.github.io/stella/site/extensions/subtyping/#bottom-type) Type
+* Other:
+  * `#ambiguous-type-as-bottom`
+  * `#type-cast` and `#try-cast-as`
 
 ## Build and run
 
 Build:
-```
+```shell
 gradlew jar
 ```
 
 Run:
-```
+```shell
 java -jar build/libs/stella-type-checker.jar
 ```
 
