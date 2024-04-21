@@ -216,10 +216,6 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     // #type-ascriptions
     override fun visitTypeAsc(ctx: TypeAscContext): StellaType = with(ctx) {
         val ascType = type_.resolve()
-        // Not necessary check, just trying to follow online-interpreter behaviour
-        expectedType?.takeIf { it != ascType }?.let {
-            throw UnexpectedTypeForExpression("$ascType", "$it", src)
-        }
         return expr_.checkOrThrow(ascType)
     }
 
@@ -321,7 +317,7 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     }
 
     override fun visitDeref(ctx: DerefContext): StellaType = with(ctx) {
-        val ref = expr_.check(expectedType?.let { StellaRef(it) })
+        val ref = expectedType?.let { expr_.checkOrThrow(StellaRef(it)) } ?: expr_.check()
         if (ref !is StellaRef) throw NotAReference("$ref", expr_.src, ctx.src)
         return ref.type
     }
@@ -381,6 +377,12 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     override fun visitTryWith(ctx: TryWithContext): StellaType = with(ctx) {
         val type = tryExpr.checkOrThrow(expectedType)
         return fallbackExpr.checkOrThrow(type)
+    }
+
+    // #type-cast
+    override fun visitTypeCast(ctx: TypeCastContext): StellaType = with(ctx) {
+        expr_.check()
+        return type_.resolve()
     }
 
     // Utils
