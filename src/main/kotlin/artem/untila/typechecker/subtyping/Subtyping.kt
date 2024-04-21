@@ -14,6 +14,7 @@ fun StellaType.isSubtypeOf(other: StellaType): Boolean = when {
         is StellaVariant    -> isSubtypeOf(other as StellaVariant)
         is StellaRef        -> isSubtypeOf(other as StellaRef)
         is StellaFunction   -> isSubtypeOf(other as StellaFunction)
+        is StellaSum        -> isSubtypeOf(other as StellaSum)
         else                -> false
     }
 }
@@ -59,4 +60,8 @@ fun StellaFunction.isSubtypeOf(other: StellaFunction): Boolean {
         if (!other.paramTypes[i].isSubtypeOf(this.paramTypes[i])) return false
     }
     return this.returnType.isSubtypeOf(other.returnType)
+}
+
+fun StellaSum.isSubtypeOf(other: StellaSum): Boolean {
+    return this.left.isSubtypeOf(other.left) && this.right.isSubtypeOf(other.right)
 }
