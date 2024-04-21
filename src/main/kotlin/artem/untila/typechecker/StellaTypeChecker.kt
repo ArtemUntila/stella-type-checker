@@ -314,7 +314,7 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     // #sequencing
     override fun visitSequence(ctx: SequenceContext): StellaType = with(ctx) {
         expr1.checkOrThrow(StellaUnit)
-        return expr2.check()
+        return expr2.checkOrThrow(expectedType)
     }
 
     // #references
