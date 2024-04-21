@@ -12,6 +12,7 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
 
     private val extensions = mutableSetOf<String>()
     private val structuralSubtyping: Boolean by lazy { extensions.contains("#structural-subtyping") }
+    private val ambiguousTypeAsBottom: Boolean by lazy { extensions.contains("#ambiguous-type-as-bottom") }
 
     private val variableContext = VariableContext()
 
@@ -235,8 +236,8 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
         val type = when {
             list is StellaList -> list.type
             anyTypeIsExpected -> {
-                if (exprs.isEmpty()) throw AmbiguousListType()
-                exprs.removeFirst().check()
+                if (exprs.isEmpty()) botOrThrowAmbiguous { AmbiguousListType() }
+                else exprs.removeFirst().check()
             }
             else -> throw UnexpectedList("$list", src)
         }
@@ -268,14 +269,24 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     }
 
     // #sum-types
-    override fun visitInl(ctx: InlContext): StellaType = visitInjection(ctx, ctx.expr_) { it.left }
-    override fun visitInr(ctx: InrContext): StellaType = visitInjection(ctx, ctx.expr_) { it.right }
-
-    private inline fun visitInjection(ctx: ExprContext, expr: ExprContext, block: (StellaSum) -> StellaType): StellaType {
+    override fun visitInl(ctx: InlContext): StellaType = with(ctx) {
         val sum = expectedType
         return when {
-            sum is StellaSum -> sum.also { expr.checkOrThrow(block(it)) }
-            anyTypeIsExpected -> throw AmbiguousSumType()
+            sum is StellaSum -> sum.also { expr_.checkOrThrow(sum.left) }
+            anyTypeIsExpected -> botOrThrowAmbiguous { AmbiguousSumType() }.let {
+                StellaSum(expr_.check(), it)
+            }
+            else -> throw UnexpectedInjection("$sum", ctx.src)
+        }
+    }
+
+    override fun visitInr(ctx: InrContext): StellaType = with(ctx) {
+        val sum = expectedType
+        return when {
+            sum is StellaSum -> sum.also { expr_.checkOrThrow(sum.right) }
+            anyTypeIsExpected -> botOrThrowAmbiguous { AmbiguousSumType() }.let {
+                StellaSum(it, expr_.check())
+            }
             else -> throw UnexpectedInjection("$sum", ctx.src)
         }
     }
@@ -339,7 +350,7 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
 
     // #panic
     override fun visitPanic(ctx: PanicContext): StellaType {
-        return expectedType ?: throw AmbiguousPanicType()
+        return expectedType ?: botOrThrowAmbiguous { AmbiguousPanicType() }
     }
 
     // #exceptions, #exception-type-declaration
@@ -351,11 +362,9 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     }
 
     override fun visitThrow(ctx: ThrowContext): StellaType = with(ctx) {
-        val excType = exceptionType ?: throw ExceptionTypeNotDeclared()
-        return when (val type = expectedType) {
-            null -> throw AmbiguousThrowType()
-            else -> type.also { expr_.checkOrThrow(excType) }
-        }
+        val type = expectedType ?: botOrThrowAmbiguous { AmbiguousThrowType() }
+        expr_.checkOrThrow(exceptionType ?: throw ExceptionTypeNotDeclared())
+        return type
     }
 
     override fun visitTryCatch(ctx: TryCatchContext): StellaType = with(ctx) {
@@ -419,6 +428,12 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
             it.expr_ = expr
         }
         return matcher.visitMatchCase(matchCase)
+    }
+
+    // #ambiguous-type-as-bottom
+    private fun botOrThrowAmbiguous(error: () -> TypeCheckError): StellaBot {
+        if (ambiguousTypeAsBottom) return StellaBot
+        else throw error()
     }
 
     // Sugary sugar

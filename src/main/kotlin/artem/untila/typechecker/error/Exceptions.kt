@@ -160,7 +160,7 @@ class UnexpectedList(expected: String, expr: String) : TypeCheckError(
 
 class AmbiguousListType : TypeCheckError(
     "AMBIGUOUS_LIST_TYPE",
-    "type inference of empty lists is not supported (use type ascriptions)"
+    "type inference of empty lists is not supported (use type ascriptions or enable #ambiguous-type-as-bottom)"
 )
 
 // #sum-types
@@ -173,7 +173,7 @@ class UnexpectedInjection(expected: String, expr: String) : TypeCheckError(
 
 class AmbiguousSumType : TypeCheckError(
     "AMBIGUOUS_SUM_TYPE",
-    "type inference for sum types is not supported (use type ascriptions)"
+    "type inference for sum types is not supported (use type ascriptions or enable #ambiguous-type-as-bottom)"
 )
 
 // #variants
@@ -194,7 +194,7 @@ class UnexpectedVariantLabel(label: String, expected: String, expr: String) : Ty
 
 class AmbiguousVariantType : TypeCheckError(
     "AMBIGUOUS_VARIANT_TYPE",
-    "type inference for variants is not supported (use type ascriptions)"
+    "type inference for variants is not supported (use type ascriptions or enable #structural-subtyping)"
 )
 
 // Pattern-matching
