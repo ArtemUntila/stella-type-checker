@@ -51,7 +51,7 @@ fun StellaVariant.isSubtypeOf(other: StellaVariant): Boolean {
 }
 
 fun StellaRef.isSubtypeOf(other: StellaRef): Boolean {
-    return this.type.isSubtypeOf(other.type)
+    return this.type.isSubtypeOf(other.type) && other.type.isSubtypeOf(this.type)
 }
 
 fun StellaFunction.isSubtypeOf(other: StellaFunction): Boolean {
