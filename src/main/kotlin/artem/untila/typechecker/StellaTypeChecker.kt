@@ -1,6 +1,8 @@
 package artem.untila.typechecker
 
 import StellaParser.*
+import artem.untila.typechecker.context.ContextVariable
+import artem.untila.typechecker.context.StackBasedContext
 import artem.untila.typechecker.error.*
 import artem.untila.typechecker.pattern.StellaPatternMatcher
 import artem.untila.typechecker.types.*
@@ -11,7 +13,7 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
 
     private val typeResolver = StellaTypeResolver()
 
-    private val variableContext = VariableContext()
+    private val variableContext = StackBasedContext<ContextVariable>()
 
     private val expectedTypes = ArrayDeque<StellaType?>()  // for debugging purposes
     private val expectedType: StellaType?

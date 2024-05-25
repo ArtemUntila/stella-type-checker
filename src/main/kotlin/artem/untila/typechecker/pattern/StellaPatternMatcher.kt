@@ -2,6 +2,7 @@ package artem.untila.typechecker.pattern
 
 import StellaParser.*
 import artem.untila.typechecker.*
+import artem.untila.typechecker.context.ContextVariable
 import artem.untila.typechecker.error.*
 import artem.untila.typechecker.types.*
 
