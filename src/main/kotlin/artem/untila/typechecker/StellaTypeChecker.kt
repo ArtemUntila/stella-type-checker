@@ -19,13 +19,23 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     private val expectedType: StellaType?
         get() = expectedTypes.first()
 
+
+    override fun defaultResult(): StellaType = StellaUnit
+
     // Language core
     // Program
     override fun visitProgram(ctx: ProgramContext): StellaType = with(ctx) {
-        val funDecls = decls.filterIsInstance<DeclFunContext>()
-        variableContext.pushAll(funDecls.map { it.toContextVariable() })
+        val declsToVisit = mutableListOf<DeclContext>()
+        for (decl in decls) {
+            val ctxVariable = when (decl) {
+                is DeclFunContext -> ContextVariable(decl.name.text, decl.toStellaFunction())
+                else -> continue
+            }
+            declsToVisit += decl
+            variableContext.push(ctxVariable)
+        }
 
-        funDecls.forEach { visitDeclFun(it) }
+        declsToVisit.forEach { it.accept(this@StellaTypeChecker) }
 
         val main = variableContext["main"] ?: throw MissingMain()
         if ((main.type as StellaFunction).params != 1) throw IncorrectArityOfMain()
@@ -34,19 +44,19 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     }
 
     // Function declaration
-    override fun visitDeclFun(ctx: DeclFunContext): StellaType = with(ctx) {
-        val variables = paramDecls.mapTo(mutableListOf()) { it.toContextVariable() }
-        val function = toStellaFunction()
+    override fun visitDeclFun(ctx: DeclFunContext): StellaFunction = with(ctx) {
+        val function = variableContext[name.text]!!.type as StellaTopLevelFunction
+        val localVariables = function.paramVariables.toMutableList()
 
         // #nested-function-declarations
         localDecls.filterIsInstance<DeclFunContext>().forEach {
-            variableContext.with(variables) {
+            val nestedFunction = variableContext.with(localVariables) {
                 visitDeclFun(it)
             }
-            variables.add(it.toContextVariable())
+            localVariables += ContextVariable(it.name.text, nestedFunction)
         }
 
-        returnExpr.checkOrThrow(function.returnType, *variables.toTypedArray())
+        returnExpr.checkOrThrow(function.returnType, *localVariables.toTypedArray())
 
         return function
     }
@@ -299,9 +309,12 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
 
     // Sugary sugar
     private fun ParamDeclContext.toContextVariable() = ContextVariable(name.text, paramType.resolve())
-    private fun DeclFunContext.toContextVariable() = ContextVariable(name.text, toStellaFunction())
-    private fun DeclFunContext.toStellaFunction(): StellaFunction {
-        return StellaFunction(paramDecls.map { it.paramType.resolve() }, returnType.resolve())
+
+    private fun DeclFunContext.toStellaFunction(): StellaTopLevelFunction {
+        return StellaTopLevelFunction(
+            paramVariables = paramDecls.map { it.toContextVariable() },
+            returnType = returnType.resolve()
+        )
     }
 
     private fun StellatypeContext.resolve(): StellaType = accept(typeResolver)
