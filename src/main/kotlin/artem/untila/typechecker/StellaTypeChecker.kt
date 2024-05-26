@@ -4,6 +4,8 @@ import StellaParser.*
 import artem.untila.typechecker.context.ContextVariable
 import artem.untila.typechecker.context.StackBasedContext
 import artem.untila.typechecker.error.*
+import artem.untila.typechecker.generic.GenericTypeContainer
+import artem.untila.typechecker.generic.GenericTypeResolver
 import artem.untila.typechecker.pattern.StellaPatternMatcher
 import artem.untila.typechecker.types.*
 import artem.untila.typechecker.types.StellaField.Companion.colon
@@ -11,7 +13,7 @@ import artem.untila.typechecker.types.StellaFunction.Companion.arrow
 
 class StellaTypeChecker : StellaVisitor<StellaType>() {
 
-    private val typeResolver = StellaTypeResolver()
+    private val typeResolver = GenericTypeResolver()
 
     private val variableContext = StackBasedContext<ContextVariable>()
 
@@ -29,6 +31,7 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
         for (decl in decls) {
             val ctxVariable = when (decl) {
                 is DeclFunContext -> ContextVariable(decl.name.text, decl.toStellaFunction())
+                is DeclFunGenericContext -> ContextVariable(decl.name.text, decl.toGenericFunContainer())
                 else -> continue
             }
             declsToVisit += decl
@@ -278,6 +281,36 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
         return StellaPatternMatcher(expectedType, this).visitMatch(ctx)
     }
 
+    // #universal-types
+    override fun visitDeclFunGeneric(ctx: DeclFunGenericContext): StellaType {
+        val genericContainer = variableContext[ctx.name.text]!!.type as GenericTypeContainer<*>
+        val function = genericContainer.type as StellaTopLevelFunction
+
+        typeResolver.withGenerics(genericContainer.generics) {
+            ctx.returnExpr.checkOrThrow(function.returnType, *function.paramVariables.toTypedArray())
+        }
+
+        return genericContainer
+    }
+
+    override fun visitTypeAbstraction(ctx: TypeAbstractionContext): StellaType {
+        val generics = ctx.generics.map { it.text }
+        return typeResolver.newGenericContainer(generics) {
+            ctx.expr_.check()
+        }
+    }
+
+    override fun visitTypeApplication(ctx: TypeApplicationContext): StellaType {
+        val genericContainer = ctx.`fun`.check()
+        if (genericContainer !is GenericTypeContainer<*>) throw NotAGenericFunction("$genericContainer", ctx.`fun`.src, ctx.src)
+        if (genericContainer.generics.size != ctx.types.size) {
+            throw IncorrectNumberOfTypeArguments(genericContainer.generics.size, "$genericContainer", ctx.types.size, ctx.src)
+        }
+
+        val actualTypes = ctx.types.map { it.resolve() }
+        return genericContainer.substitute(actualTypes)
+    }
+
     // Utils
     internal fun ExprContext.check(expected: StellaType? = null, vararg variables: ContextVariable): StellaType {
         expectedTypes.addFirst(expected)
@@ -298,7 +331,6 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
         }
     }
 
-    // Sugary sugar
     private fun ParamDeclContext.toContextVariable() = ContextVariable(name.text, paramType.resolve())
 
     private fun DeclFunContext.toStellaFunction(): StellaTopLevelFunction {
@@ -306,6 +338,16 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
             paramVariables = paramDecls.map { it.toContextVariable() },
             returnType = returnType.resolve()
         )
+    }
+
+    private fun DeclFunGenericContext.toGenericFunContainer(): GenericTypeContainer<StellaTopLevelFunction> {
+        val generics = generics.map { it.text }
+        return typeResolver.newGenericContainer(generics) {
+            StellaTopLevelFunction(
+                paramVariables = paramDecls.map { it.toContextVariable() },
+                returnType = returnType.resolve()
+            )
+        }
     }
 
     private fun StellatypeContext.resolve(): StellaType = accept(typeResolver)

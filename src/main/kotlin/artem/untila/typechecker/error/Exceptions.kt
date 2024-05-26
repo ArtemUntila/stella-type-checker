@@ -238,3 +238,24 @@ class UnexpectedNumberOfParametersInLambda(n: Int, expected: String, m: Int, exp
         "but got $m parameters in function" to expr
     )
 )
+
+// #universal-types
+class NotAGenericFunction(actual: String, expr: String, ctx: String) : TypeCheckError(
+    "NOT_A_GENERIC_FUNCTION", formatted(
+        "expected a universal type but got" to actual,
+        "for the expression" to expr,
+        "in the type application" to ctx
+    )
+)
+
+class IncorrectNumberOfTypeArguments(n: Int, expr: String, m: Int, ctx: String) : TypeCheckError(
+    "INCORRECT_NUMBER_OF_TYPE_ARGUMENTS", formatted(
+        "expected $n type arguments\nfor the expression" to expr,
+        "but got $m type arguments\nin the application" to ctx
+    )
+)
+
+class UndefinedTypeVariable(name: String) : TypeCheckError(
+    "UNDEFINED_TYPE_VARIABLE",
+    "undefined type variable $name"
+)
