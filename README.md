@@ -15,9 +15,9 @@ Type Checker supports language core features with following extensions:
 * [Sum Types](https://fizruk.github.io/stella/site/extensions/simple-types/#sum-types)
 * [Variants](https://fizruk.github.io/stella/site/extensions/simple-types/#variants)
 * [Fixed-point combinator](https://fizruk.github.io/stella/site/extensions/syntax/#primitive-recursion-loops)
-* [Nested Function Declarations](https://fizruk.github.io/stella/site/extensions/syntax/#nested-function-declarations)
 * [Nullary Functions](https://fizruk.github.io/stella/site/extensions/syntax/#nullary-functions)
 * [Multiparameter Functions](https://fizruk.github.io/stella/site/extensions/syntax/#multiparameter-functions)
+* [Universal types](https://fizruk.github.io/stella/site/extensions/universal-types/)
 
 ## Build and run
 
