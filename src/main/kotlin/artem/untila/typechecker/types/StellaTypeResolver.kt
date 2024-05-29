@@ -68,5 +68,9 @@ object StellaTypeResolver : StellaParserBaseVisitor<StellaType>() {
         return StellaBot
     }
 
+    override fun visitTypeAuto(ctx: TypeAutoContext): StellaAuto {
+        return StellaAuto
+    }
+
     fun resolve(typeContext: StellatypeContext): StellaType = typeContext.accept(this)
 }

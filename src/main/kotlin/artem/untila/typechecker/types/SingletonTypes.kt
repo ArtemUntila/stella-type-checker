@@ -19,3 +19,8 @@ object StellaTop : StellaType {
 object StellaBot : StellaType {
     override fun toString() = "Bot"
 }
+
+object StellaAuto : StellaType {
+    override fun toString(): String = "auto"
+    override fun equals(other: Any?): Boolean = other is StellaType
+}

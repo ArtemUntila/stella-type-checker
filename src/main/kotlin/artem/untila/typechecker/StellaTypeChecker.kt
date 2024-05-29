@@ -21,7 +21,7 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
         get() = expectedTypes.first()
 
     private val anyTypeIsExpected: Boolean
-        get() = expectedType == null || (structuralSubtyping && expectedType == StellaTop)
+        get() = expectedType == null || expectedType == StellaAuto || (structuralSubtyping && expectedType == StellaTop)
 
     // Language core
     // Program
@@ -226,7 +226,7 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
             if (it !is StellaFunction) throw NotAFunction("$it", expr_.src, src)
             it.returnType
         }
-        return expr_.checkOrThrow(type arrow type).returnType
+        return (expr_.checkOrThrow(type arrow type) as StellaFunction).returnType
     }
 
     // #lists
@@ -407,12 +407,13 @@ class StellaTypeChecker : StellaVisitor<StellaType>() {
     internal inline fun <reified T : StellaType> ExprContext.checkOrThrow(
         expected: T?,
         vararg variables: ContextVariable
-    ): T {
+    ): StellaType {
         val actual = check(expected, *variables)
         if (structuralSubtyping && expected != null) {
             if (actual.isSubtypeOf(expected)) return expected
             else throw UnexpectedSubtype("$expected", "$actual", src)
         }
+        if (expected is StellaAuto) return actual
         return actual.takeIf { expected == null || expected == it } as? T ?: run {
             throw UnexpectedTypeForExpression("$expected", "$actual", src)
         }
